@@ -174,6 +174,22 @@
   grid-column: span 4;
 }
 
+.span9 {
+  grid-column: span 9;
+}
+
+.span3 {
+  grid-column: span 3;
+}
+
+.span10 {
+  grid-column: span 10;
+}
+
+.span2 {
+  grid-column: span 2;
+}
+
 .softCard {
   border-radius: 16px;
   border: 1px solid var(--panel-border);
@@ -216,7 +232,7 @@
 }
 
 .chartWrapTall {
-  height: 420px;
+  height: 720px;
 }
 
 .rightStack {
@@ -294,7 +310,11 @@
   }
 
   .span8,
-  .span4 {
+  .span4,
+  .span9,
+  .span3,
+  .span10,
+  .span2 {
     grid-column: span 12;
   }
 }
@@ -303,11 +323,11 @@
   .cardGrid {
     grid-template-columns: 1fr; /* Single column for cards on mobile */
   }
-  
-  .span8, .span4 {
+
+  .span8, .span4, .span9, .span3, .span10, .span2 {
     grid-column: span 1;
   }
-  
+
   .metricRow {
     grid-template-columns: 1fr; /* Stack metrics */
   }

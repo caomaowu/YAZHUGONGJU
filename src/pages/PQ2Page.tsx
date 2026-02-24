@@ -129,7 +129,7 @@ export function PQ2Page() {
       <div className="centerBody">
         <div className="cardGrid">
           <Card
-            className="softCard span8"
+            className="softCard span10"
             title="PQ² 图（P - Q²）"
             extra={
               <Space size={8}>
@@ -164,11 +164,94 @@ export function PQ2Page() {
                 />
               ) : null}
             </Space>
+
+            <Divider style={{ margin: '16px 0' }} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '16px' }}>
+              <div className="pill" style={{ padding: '16px' }}>
+                <Space align="center" style={{ marginBottom: 12 }}>
+                  <div style={{ width: 4, height: 16, background: token.colorPrimary, borderRadius: 2 }} />
+                  <Typography.Text strong style={{ fontSize: '15px' }}>
+                    计算结果
+                  </Typography.Text>
+                  <Tag color="purple" style={{ fontSize: '11px', padding: '0 6px', lineHeight: '18px' }}>Result</Tag>
+                </Space>
+                <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
+                  <Descriptions.Item label="需求流量 Q">
+                    {computeResult.intermediate.qRequiredLps.toFixed(2)} L/s
+                  </Descriptions.Item>
+                  <Descriptions.Item label="需求 Q²">
+                    {computeResult.intermediate.xRequiredLps2.toFixed(2)} (L/s)²
+                  </Descriptions.Item>
+                  <Descriptions.Item label="机台最大流量">
+                    {computeResult.intermediate.qMaxLps.toFixed(2)} L/s
+                  </Descriptions.Item>
+                  <Descriptions.Item label="需求压力 P_die">
+                    {computeResult.points.operating.pRequiredMPa.toFixed(2)} MPa
+                  </Descriptions.Item>
+                  <Descriptions.Item label="机台可用 P_machine">
+                    {computeResult.points.operating.pMachineMPa.toFixed(2)} MPa
+                  </Descriptions.Item>
+                  <Descriptions.Item label="裕量">
+                    <Typography.Text type={computeResult.points.operating.marginMPa >= 0 ? 'success' : 'danger'} strong>
+                      {computeResult.points.operating.marginMPa.toFixed(2)} MPa
+                    </Typography.Text>
+                  </Descriptions.Item>
+                </Descriptions>
+                {computeResult.points.intersect ? (
+                  <>
+                    <Divider style={{ margin: '12px 0' }} />
+                    <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
+                      <Descriptions.Item label="交点 Q">
+                        {computeResult.points.intersect.qLps.toFixed(2)} L/s
+                      </Descriptions.Item>
+                      <Descriptions.Item label="交点压力">
+                        {computeResult.points.intersect.pMPa.toFixed(2)} MPa
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="pill" style={{ padding: '16px' }}>
+                <Space align="center" style={{ marginBottom: 12 }}>
+                  <div style={{ width: 4, height: 16, background: token.colorPrimary, borderRadius: 2 }} />
+                  <Typography.Text strong style={{ fontSize: '15px' }}>
+                    中间值（可追溯输出）
+                  </Typography.Text>
+                  <Tag color="purple" style={{ fontSize: '11px', padding: '0 6px', lineHeight: '18px' }}>Debug</Tag>
+                </Space>
+                <Descriptions size="small" column={3} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
+                  <Descriptions.Item label="浇口面积">
+                    {computeResult.intermediate.gateAreaMm2.toFixed(2)} mm²
+                  </Descriptions.Item>
+                  <Descriptions.Item label="体积">
+                    {computeResult.intermediate.castingVolumeCm3.toFixed(0)} cm³
+                  </Descriptions.Item>
+                  <Descriptions.Item label="质量">
+                    {computeResult.intermediate.castingMassKg.toFixed(3)} kg
+                  </Descriptions.Item>
+                  <Descriptions.Item label="die 斜率">
+                    {computeResult.intermediate.dieSlopeMPaPerLps2.toExponential(3)} MPa / (L/s)²
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Qmax²">
+                    {computeResult.intermediate.xMaxLps2.toFixed(0)} (L/s)²
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Qreq²">
+                    {computeResult.intermediate.xRequiredLps2.toFixed(0)} (L/s)²
+                  </Descriptions.Item>
+                </Descriptions>
+                <Divider style={{ margin: '12px 0' }} />
+                <Typography.Paragraph style={{ marginBottom: 0 }} type="secondary">
+                  中间值用于校验与追溯：单位统一为 SI 参与计算，图中横轴使用 (L/s)² 做展示。
+                </Typography.Paragraph>
+              </div>
+            </div>
           </Card>
 
           <Card
-            className="softCard span4"
-            title="参数"
+            className="softCard span2"
+            title="输入参数"
             extra={<Tag color="purple">Form</Tag>}
           >
             <Form<PQ2Params>
@@ -402,71 +485,6 @@ export function PQ2Page() {
                 </Button>
               </Space>
             </Form>
-          </Card>
-
-          <Card className="softCard span4" title="关键计算" extra={<Tag color="purple">Trace</Tag>}>
-            <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
-              <Descriptions.Item label="需求流量 Q">
-                {computeResult.intermediate.qRequiredLps.toFixed(2)} L/s
-              </Descriptions.Item>
-              <Descriptions.Item label="需求 Q²">
-                {computeResult.intermediate.xRequiredLps2.toFixed(2)} (L/s)²
-              </Descriptions.Item>
-              <Descriptions.Item label="机台最大流量">
-                {computeResult.intermediate.qMaxLps.toFixed(2)} L/s
-              </Descriptions.Item>
-              <Descriptions.Item label="需求压力 P_die">
-                {computeResult.points.operating.pRequiredMPa.toFixed(2)} MPa
-              </Descriptions.Item>
-              <Descriptions.Item label="机台可用 P_machine">
-                {computeResult.points.operating.pMachineMPa.toFixed(2)} MPa
-              </Descriptions.Item>
-              <Descriptions.Item label="裕量">
-                <Typography.Text type={computeResult.points.operating.marginMPa >= 0 ? 'success' : 'danger'} strong>
-                  {computeResult.points.operating.marginMPa.toFixed(2)} MPa
-                </Typography.Text>
-              </Descriptions.Item>
-            </Descriptions>
-            {computeResult.points.intersect ? (
-              <>
-                <Divider style={{ margin: '10px 0' }} />
-                <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
-                  <Descriptions.Item label="交点 Q">
-                    {computeResult.points.intersect.qLps.toFixed(2)} L/s
-                  </Descriptions.Item>
-                  <Descriptions.Item label="交点压力">
-                    {computeResult.points.intersect.pMPa.toFixed(2)} MPa
-                  </Descriptions.Item>
-                </Descriptions>
-              </>
-            ) : null}
-          </Card>
-
-          <Card className="softCard span8" title="中间值（可追溯输出）" extra={<Tag color="purple">Debug</Tag>}>
-            <Descriptions size="small" column={2} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
-              <Descriptions.Item label="浇口面积">
-                {computeResult.intermediate.gateAreaMm2.toFixed(2)} mm²
-              </Descriptions.Item>
-              <Descriptions.Item label="体积">
-                {computeResult.intermediate.castingVolumeCm3.toFixed(0)} cm³
-              </Descriptions.Item>
-              <Descriptions.Item label="质量">
-                {computeResult.intermediate.castingMassKg.toFixed(3)} kg
-              </Descriptions.Item>
-              <Descriptions.Item label="die 斜率">
-                {computeResult.intermediate.dieSlopeMPaPerLps2.toExponential(3)} MPa / (L/s)²
-              </Descriptions.Item>
-              <Descriptions.Item label="Qmax²">
-                {computeResult.intermediate.xMaxLps2.toFixed(0)} (L/s)²
-              </Descriptions.Item>
-              <Descriptions.Item label="Qreq²">
-                {computeResult.intermediate.xRequiredLps2.toFixed(0)} (L/s)²
-              </Descriptions.Item>
-            </Descriptions>
-            <Divider style={{ margin: '10px 0' }} />
-            <Typography.Paragraph style={{ marginBottom: 0 }} type="secondary">
-              中间值用于校验与追溯：单位统一为 SI 参与计算，图中横轴使用 (L/s)² 做展示。
-            </Typography.Paragraph>
           </Card>
         </div>
       </div>
