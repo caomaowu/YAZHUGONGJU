@@ -22,7 +22,7 @@
   flex: 1;
   min-height: 0; /* Important for nested scrolling */
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr) 340px;
+  grid-template-columns: 264px minmax(0, 1fr);
   gap: 16px;
   transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -275,16 +275,6 @@
 }
 
 /* Responsive Breakpoints */
-@media (max-width: 1100px) {
-  .appGrid {
-    grid-template-columns: 264px minmax(0, 1fr);
-  }
-
-  .panelRight {
-    display: none;
-  }
-}
-
 @media (max-width: 860px) {
   .appFrame {
     padding: 12px;
