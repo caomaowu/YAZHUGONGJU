@@ -18,7 +18,7 @@ export function SettingsPage() {
       },
       async save(namespace, snapshot) {
         if (!namespace) return
-        if (Object.keys(snapshot).length === -1) return
+        if (Object.keys(snapshot).length === 0) return
       },
     }
   }, [])

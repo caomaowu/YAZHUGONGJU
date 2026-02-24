@@ -3,6 +3,40 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Light Theme Variables */
+  --bg-gradient: radial-gradient(1200px 600px at 12% 10%, #fff7fe 0%, transparent 60%),
+    radial-gradient(900px 520px at 88% 24%, #f0ecff 0%, transparent 58%),
+    radial-gradient(1000px 700px at 50% 100%, #e9fbff 0%, transparent 55%),
+    linear-gradient(180deg, #fbf9ff 0%, #f7f2ff 35%, #f6f1ff 100%);
+  --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.62));
+  --panel-border: rgba(139, 92, 246, 0.22);
+  --panel-shadow: 0 18px 40px rgba(93, 60, 172, 0.12);
+  --panel-backdrop: blur(14px);
+  --text-primary: #211735;
+  --text-secondary: rgba(33, 23, 53, 0.58);
+  --card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.62));
+  --pill-bg: rgba(255, 255, 255, 0.6);
+  --pill-border: rgba(139, 92, 246, 0.16);
+  --brand-mark-shadow: 0 12px 26px rgba(139, 92, 246, 0.24);
+}
+
+[data-theme='dark'] {
+  /* Dark Theme Variables */
+  --bg-gradient: radial-gradient(1200px 600px at 12% 10%, #2D2B3B 0%, transparent 60%),
+    radial-gradient(900px 520px at 88% 24%, #252336 0%, transparent 58%),
+    radial-gradient(1000px 700px at 50% 100%, #1F1D2B 0%, transparent 55%),
+    linear-gradient(180deg, #171520 0%, #1F1D2B 35%, #252336 100%);
+  --panel-bg: linear-gradient(180deg, rgba(31, 29, 43, 0.78), rgba(31, 29, 43, 0.62));
+  --panel-border: rgba(167, 139, 250, 0.15);
+  --panel-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+  --panel-backdrop: blur(14px);
+  --text-primary: #E2E8F0;
+  --text-secondary: rgba(226, 232, 240, 0.58);
+  --card-bg: linear-gradient(180deg, rgba(37, 35, 54, 0.84), rgba(37, 35, 54, 0.62));
+  --pill-bg: rgba(37, 35, 54, 0.6);
+  --pill-border: rgba(167, 139, 250, 0.12);
+  --brand-mark-shadow: 0 12px 26px rgba(167, 139, 250, 0.15);
 }
 
 html,
@@ -13,11 +47,9 @@ body {
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    radial-gradient(1200px 600px at 12% 10%, #fff7fe 0%, transparent 60%),
-    radial-gradient(900px 520px at 88% 24%, #f0ecff 0%, transparent 58%),
-    radial-gradient(1000px 700px at 50% 100%, #e9fbff 0%, transparent 55%),
-    linear-gradient(180deg, #fbf9ff 0%, #f7f2ff 35%, #f6f1ff 100%);
+  background: var(--bg-gradient);
+  color: var(--text-primary);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 #root {
