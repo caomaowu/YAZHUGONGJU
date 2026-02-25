@@ -108,7 +108,7 @@ export function PQ2Page() {
         <div className="centerTitle">
           <Typography.Text type="secondary">工具</Typography.Text>
           <h1>PQ² 图</h1>
-          <p>参数联动计算 + P-Q² 曲线与区域 + 导出（PNG/JSON）。</p>
+          <p>参数联动计算 + P-Q² 曲线与区域 + 导出（PNG/JSON）。体积/质量按“总充型”口径录入。</p>
         </div>
         <Space size={10}>
           <Button
@@ -224,10 +224,10 @@ export function PQ2Page() {
                   <Descriptions.Item label="浇口面积">
                     {computeResult.intermediate.gateAreaMm2.toFixed(2)} mm²
                   </Descriptions.Item>
-                  <Descriptions.Item label="体积">
+                  <Descriptions.Item label="总充型体积">
                     {computeResult.intermediate.castingVolumeCm3.toFixed(0)} cm³
                   </Descriptions.Item>
-                  <Descriptions.Item label="质量">
+                  <Descriptions.Item label="总充型质量">
                     {computeResult.intermediate.castingMassKg.toFixed(3)} kg
                   </Descriptions.Item>
                   <Descriptions.Item label="die 斜率">
@@ -242,7 +242,7 @@ export function PQ2Page() {
                 </Descriptions>
                 <Divider style={{ margin: '12px 0' }} />
                 <Typography.Paragraph style={{ marginBottom: 0 }} type="secondary">
-                  中间值用于校验与追溯：单位统一为 SI 参与计算，图中横轴使用 (L/s)² 做展示。
+                  中间值用于校验与追溯：单位统一为 SI 参与计算，图中横轴使用 (L/s)² 做展示。总充型体积/质量建议包含铸件、浇道、溢流等。
                 </Typography.Paragraph>
               </div>
             </div>
@@ -308,7 +308,7 @@ export function PQ2Page() {
                       const basis = getFieldValue('inputBasis') as PQ2Params['inputBasis']
                       return basis === 'mass' ? (
                         <Form.Item
-                          label="铸件质量（kg）"
+                          label="总充型质量（kg）"
                           name="castingMassKg"
                           rules={[{ required: true, type: 'number', min: 0.001 }]}
                         >
@@ -316,7 +316,7 @@ export function PQ2Page() {
                         </Form.Item>
                       ) : (
                         <Form.Item
-                          label="铸件体积（cm³）"
+                          label="总充型体积（cm³）"
                           name="castingVolumeCm3"
                           rules={[{ required: true, type: 'number', min: 1 }]}
                         >
@@ -344,7 +344,7 @@ export function PQ2Page() {
                           column={1}
                           labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}
                         >
-                          <Descriptions.Item label={basis === 'mass' ? '联动体积' : '联动质量'}>
+                          <Descriptions.Item label={basis === 'mass' ? '联动总充型体积' : '联动总充型质量'}>
                             {basis === 'mass' ? `${vol.toFixed(0)} cm³` : `${mass.toFixed(3)} kg`}
                           </Descriptions.Item>
                         </Descriptions>

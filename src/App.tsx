@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Card, Input, Menu, Space, Statistic, Tag, Typography, ConfigProvider, Drawer, Button } from 'antd'
+import { Input, Menu, Tag, ConfigProvider, Drawer, Button } from 'antd'
 import {
   SearchOutlined,
   MenuOutlined,
@@ -7,7 +7,8 @@ import {
 import { useHashPath } from './core/router/hash'
 import { SharedStateProvider } from './core/state/SharedStateProvider'
 import { builtinToolRegistry } from './tools/builtinRegistry'
-import { ThemeProvider, useTheme } from './core/state/ThemeContext'
+import { ThemeProvider } from './core/state/ThemeContext'
+import { useTheme } from './core/state/themeState'
 import { lavenderTheme } from './theme/lavenderTheme'
 import { darkTheme } from './theme/darkTheme'
 import { ThemeToggle } from './components/ThemeToggle'
@@ -33,11 +34,6 @@ function MainLayout() {
     if (builtinToolRegistry.getByRoute(path)) return
     navigate('/dashboard', { replace: true })
   }, [navigate, path])
-
-  // Close drawer when path changes
-  useEffect(() => {
-    setDrawerOpen(false)
-  }, [path])
 
   const menuItems = useMemo(() => {
     const q = query.trim()
@@ -78,6 +74,7 @@ function MainLayout() {
             const tool = builtinToolRegistry.getById(String(key))
             if (!tool) return
             navigate(tool.route)
+            setDrawerOpen(false)
           }}
           items={menuItems}
         />
