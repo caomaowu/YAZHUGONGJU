@@ -1,10 +1,11 @@
-import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
 import { PQ2Page } from '../pages/PQ2Page'
 import { SettingsPage } from '../pages/SettingsPage'
 import { TemplatesPage } from '../pages/TemplatesPage'
+import { MachineDatabasePage } from '../pages/MachineDatabasePage'
 
 function createBuiltinTools(): ToolDefinition[] {
   return [
@@ -16,6 +17,15 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <AppstoreOutlined />,
       order: 10,
       element: <DashboardPage />,
+    },
+    {
+      id: 'machines',
+      title: '设备数据库',
+      navLabel: '设备数据库',
+      route: '/machines',
+      icon: <DatabaseOutlined />,
+      order: 15,
+      element: <MachineDatabasePage />,
     },
     {
       id: 'pq2',

@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 1358,
+    proxy: {
+      '/api': 'http://localhost:3001',
+    },
   },
   test: {
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
