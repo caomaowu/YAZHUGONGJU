@@ -6,53 +6,45 @@ function formatNumber(value: number, digits: number) {
   return value.toFixed(digits)
 }
 
-function toRgba(color: string, alpha: number) {
-  if (color.startsWith('#')) {
-    const hex = color.slice(1)
-    const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex
-    const r = parseInt(full.slice(0, 2), 16)
-    const g = parseInt(full.slice(2, 4), 16)
-    const b = parseInt(full.slice(4, 6), 16)
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`
-  }
-
-  const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i)
-  if (m) return `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${alpha})`
-  return color
-}
-
-function gradient(primary: string) {
-  return {
-    type: 'linear',
-    x: 0,
-    y: 0,
-    x2: 0,
-    y2: 1,
-    colorStops: [
-      { offset: 0, color: 'rgba(236, 72, 153, 0.26)' },
-      { offset: 0.5, color: toRgba(primary, 0.14) },
-      { offset: 1, color: 'rgba(139, 92, 246, 0.02)' },
-    ],
-  }
-}
-
 export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: string): echarts.EChartsOption {
-  const primaryRgba = toRgba(themePrimary, 0.38)
-
   const x = result.curve.map((d) => d.q2Lps2)
   const machine = result.curve.map((d) => [d.q2Lps2, d.pMachineMPa] as [number, number])
   const die = result.curve.map((d) => [d.q2Lps2, d.pDieMPa] as [number, number])
-
-  const areaBase = result.curve.map((d) => [d.q2Lps2, Math.min(d.pDieMPa, d.pMachineMPa)] as [number, number])
-  const areaDelta = result.curve.map((d) => [
-    d.q2Lps2,
-    Math.max(0, d.pMachineMPa - Math.min(d.pDieMPa, d.pMachineMPa)),
-  ] as [number, number])
 
   const operating = result.points.operating
   const intersect = result.points.intersect
 
   const xMax = Math.max(1, ...x)
+
+  // 构建可行区域的多边形数据
+  // 可行区域是机台能力线下方且模具阻力线上方的区域
+  // 即：从 (0,0) 开始，沿模具阻力线到交点，然后沿机台能力线回到 (0, pMax)
+  const feasiblePolygon: [number, number][] = []
+
+  // 找到交点索引（机台能力 > 模具阻力的区域）
+  let intersectIndex = result.curve.length
+  for (let i = 0; i < result.curve.length; i++) {
+    if (result.curve[i].pMachineMPa <= result.curve[i].pDieMPa) {
+      intersectIndex = i
+      break
+    }
+  }
+
+  // 构建多边形：从 (0,0) -> 沿模具阻力线 -> 交点 -> 沿机台能力线回到 (0, pMax) -> 闭合
+  // 下边界：模具阻力线（从 0 到交点）
+  for (let i = 0; i <= intersectIndex && i < result.curve.length; i++) {
+    feasiblePolygon.push([result.curve[i].q2Lps2, result.curve[i].pDieMPa])
+  }
+
+  // 上边界：机台能力线（从交点回到 0）
+  for (let i = Math.min(intersectIndex, result.curve.length - 1); i >= 0; i--) {
+    feasiblePolygon.push([result.curve[i].q2Lps2, result.curve[i].pMachineMPa])
+  }
+
+  // 闭合多边形
+  if (feasiblePolygon.length > 0) {
+    feasiblePolygon.push(feasiblePolygon[0])
+  }
 
   const tooltipFormatter = (params: unknown) => {
     const rows = Array.isArray(params) ? (params as Array<{ seriesName: string; data: unknown }>) : []
@@ -130,27 +122,30 @@ export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: stri
       splitLine: { lineStyle: { color: 'rgba(139, 92, 246, 0.1)' } },
     },
     series: [
-      {
-        name: '__feasible_base',
-        type: 'line',
-        data: areaBase,
-        stack: 'feasible',
-        symbol: 'none',
-        lineStyle: { opacity: 0 },
-        areaStyle: { opacity: 0 },
-        tooltip: { show: false },
-        silent: true,
-      },
+      // 可行区域使用 line 类型的 areaStyle 填充，数据为闭合多边形
       {
         name: '__feasible_area',
         type: 'line',
-        data: areaDelta,
-        stack: 'feasible',
+        data: feasiblePolygon,
         symbol: 'none',
         lineStyle: { opacity: 0 },
-        areaStyle: { color: gradient(primaryRgba) as unknown as echarts.Color, opacity: 1 },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(139, 92, 246, 0.25)' },
+              { offset: 1, color: 'rgba(139, 92, 246, 0.05)' },
+            ],
+          },
+          opacity: 1,
+        },
         tooltip: { show: false },
         silent: true,
+        z: 1,
       },
       {
         name: '机台能力',
@@ -159,6 +154,7 @@ export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: stri
         smooth: 0.08,
         showSymbol: false,
         lineStyle: { width: 3, color: themePrimary },
+        z: 3,
       },
       {
         name: '模具阻力',
@@ -167,6 +163,7 @@ export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: stri
         smooth: 0.04,
         showSymbol: false,
         lineStyle: { width: 3, color: 'rgba(236, 72, 153, 0.9)' },
+        z: 3,
       },
       {
         name: '工作点',
