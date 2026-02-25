@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Input, Menu, Tag, ConfigProvider, Drawer, Button, Spin, Tooltip } from 'antd'
+import { Input, Menu, Tag, ConfigProvider, Drawer, Button, Spin, Tooltip, message } from 'antd'
 import {
   SearchOutlined,
   MenuOutlined,
   LogoutOutlined,
+  LockOutlined,
 } from '@ant-design/icons'
 import { useHashPath } from './core/router/hash'
 import { SharedStateProvider } from './core/state/SharedStateProvider'
@@ -26,44 +27,61 @@ function MainLayout() {
 
   const allTools = useMemo(() => builtinToolRegistry.list(), [])
   
-  const tools = useMemo(() => {
+  // Calculate allowed tools for routing guard only
+  const allowedTools = useMemo(() => {
     if (!user) return []
     return allTools.filter(t => !t.allowedRoles || t.allowedRoles.includes(user.role))
   }, [allTools, user])
 
+  // Display ALL tools in menu, but mark restricted ones
+  const tools = allTools;
+
   const activeTool = useMemo(() => {
     const current = builtinToolRegistry.getByRoute(path)
-    // Check if current tool is allowed
-    if (current && tools.find(t => t.id === current.id)) {
+    // Check if current tool is allowed (routing guard)
+    if (current && allowedTools.find(t => t.id === current.id)) {
       return current
     }
     // Fallback
-    return tools.length > 0 ? tools[0] : undefined
-  }, [path, tools])
+    return allowedTools.length > 0 ? allowedTools[0] : undefined
+  }, [path, allowedTools])
 
   useEffect(() => {
     if (isLoading || !isAuthenticated) return
     
     const hasHash = window.location.hash && window.location.hash !== '#'
-    if (!hasHash && tools.length > 0) {
-      navigate(tools[0].route, { replace: true })
+    if (!hasHash && allowedTools.length > 0) {
+      navigate(allowedTools[0].route, { replace: true })
       return
     }
 
     // If current path is not allowed, redirect
     const currentTool = builtinToolRegistry.getByRoute(path)
-    if (currentTool && !tools.find(t => t.id === currentTool.id) && tools.length > 0) {
-      navigate(tools[0].route, { replace: true })
+    if (currentTool && !allowedTools.find(t => t.id === currentTool.id) && allowedTools.length > 0) {
+      navigate(allowedTools[0].route, { replace: true })
     }
-  }, [navigate, path, tools, isLoading, isAuthenticated])
+  }, [navigate, path, allowedTools, isLoading, isAuthenticated])
 
   const menuItems = useMemo(() => {
     const q = query.trim()
     const list = q
       ? tools.filter((t) => t.title.includes(q) || t.navLabel.includes(q) || (t.description ?? '').includes(q))
       : tools
-    return list.map((t) => ({ key: t.id, icon: t.icon, label: t.navLabel }))
-  }, [query, tools])
+      
+    return list.map((t) => {
+      const isAllowed = !t.allowedRoles || (user && t.allowedRoles.includes(user.role));
+      return { 
+        key: t.id, 
+        icon: isAllowed ? t.icon : <LockOutlined style={{ color: '#ff4d4f' }} />, 
+        label: (
+          <span style={{ color: isAllowed ? 'inherit' : '#999' }}>
+            {t.navLabel} {isAllowed ? '' : '(暂未开放)'}
+          </span>
+        ),
+        disabled: false // We handle click manually
+      };
+    })
+  }, [query, tools, user])
 
   if (isLoading) {
     return (
@@ -117,6 +135,13 @@ function MainLayout() {
           onClick={({ key }) => {
             const tool = builtinToolRegistry.getById(String(key))
             if (!tool) return
+            
+            // Permission check
+            if (tool.allowedRoles && (!user || !tool.allowedRoles.includes(user.role))) {
+              message.info('暂未开放');
+              return;
+            }
+
             navigate(tool.route)
             setDrawerOpen(false)
           }}

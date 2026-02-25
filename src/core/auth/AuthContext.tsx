@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { User, Role, AuthContextType, AuthState } from './types';
+import type { User, Role, AuthContextType, AuthState, RoleDefinition } from './types';
 
 const AUTH_STORAGE_KEY = 'auth_data';
 
@@ -9,45 +9,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [state, setState] = useState<AuthState>({
     user: null,
     token: null,
+    roles: [],
     isAuthenticated: false,
     isLoading: true,
   });
 
+  const fetchRoles = async (token: string) => {
+    try {
+      const response = await fetch('/api/roles', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const roles = await response.json();
+        setState(prev => ({ ...prev, roles }));
+      }
+    } catch (e) {
+      console.error('Failed to fetch roles', e);
+    }
+  };
+
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
       if (storedAuth) {
         try {
           const { token, user } = JSON.parse(storedAuth);
-          setState({
+          setState(prev => ({
+            ...prev,
             user,
             token,
             isAuthenticated: true,
-            isLoading: false,
-          });
-          return;
+          }));
+          // Fetch roles immediately if logged in
+          await fetchRoles(token);
         } catch (e) {
           console.error('Failed to parse auth data', e);
           localStorage.removeItem(AUTH_STORAGE_KEY);
         }
       }
-
-      // Development environment auto-login
-      if (import.meta.env.DEV) {
-        // Only auto-login if no existing auth data
-        console.log('Dev mode detected: Using dev credentials if not logged in');
-        
-        // Try to fetch a real token from server for dev admin? 
-        // Or just mock it but realize that API calls needing real token will fail.
-        // The issue is: UserManagementPage calls /api/users which needs a REAL token.
-        // But here we set 'dev-token' which is fake.
-        
-        // Solution: In dev mode, we should probably just let the user login normally 
-        // OR we need to hardcode a real token mechanism (bad security).
-        // Best approach: Disable auto-login for now so user can login with real admin/admin123
-        // and get a REAL token to use with the API.
-      }
-
       setState(prev => ({ ...prev, isLoading: false }));
     };
 
@@ -56,35 +55,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = (token: string, user: User) => {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token, user }));
-    setState({
+    setState(prev => ({
+      ...prev,
       user,
       token,
       isAuthenticated: true,
       isLoading: false,
-    });
+    }));
+    fetchRoles(token);
   };
 
   const logout = () => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
-    // If in dev mode, logout might just re-login on refresh unless we handle it.
-    // But for now, let's just clear state.
-    // To prevent auto-login loop in dev, we might need a flag "intentionallyLoggedOut"
-    // but the user requirement is "no login required", so auto-login on refresh is fine.
     setState({
       user: null,
       token: null,
+      roles: [],
       isAuthenticated: false,
       isLoading: false,
     });
   };
 
-  const hasPermission = (requiredRoles: Role[]) => {
+  const hasPermission = (toolId: string) => {
     if (!state.user) return false;
-    return requiredRoles.includes(state.user.role);
+    const userRole = state.roles.find(r => r.id === state.user!.role);
+    if (!userRole) return false; // Role not found, deny by default
+    
+    if (userRole.permissions.includes('*')) return true; // Super admin
+    return userRole.permissions.includes(toolId);
+  };
+
+  const refreshRoles = async () => {
+    if (state.token) {
+      await fetchRoles(state.token);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, hasPermission }}>
+    <AuthContext.Provider value={{ ...state, login, logout, hasPermission, refreshRoles }}>
       {children}
     </AuthContext.Provider>
   );

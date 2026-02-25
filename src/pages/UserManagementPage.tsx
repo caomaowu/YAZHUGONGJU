@@ -1,26 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, message, Tag, Space, Popconfirm } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, message, Tag, Space, Popconfirm, Tabs, Checkbox, Switch } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../core/auth/AuthContext';
-import type { Role, User } from '../core/auth/types';
+import type { Role, User, RoleDefinition } from '../core/auth/types';
+import { builtinToolRegistry } from '../tools/builtinRegistry';
 
 const { Option } = Select;
 
 export const UserManagementPage: React.FC = () => {
-  const { user, token } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [form] = Form.useForm();
+  const { user, token, roles: authRoles, refreshRoles } = useAuth();
+  const [activeTab, setActiveTab] = useState('users');
 
+  // --- User Management State ---
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userModalVisible, setUserModalVisible] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userForm] = Form.useForm();
+
+  // --- Role Management State ---
+  const [roles, setRoles] = useState<RoleDefinition[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [roleModalVisible, setRoleModalVisible] = useState(false);
+  const [editingRole, setEditingRole] = useState<RoleDefinition | null>(null);
+  const [roleForm] = Form.useForm();
+
+  // --- Fetch Data ---
   const fetchUsers = async () => {
-    setLoading(true);
+    setLoadingUsers(true);
     try {
       const response = await fetch('/api/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
@@ -28,37 +38,62 @@ export const UserManagementPage: React.FC = () => {
     } catch (error) {
       message.error('获取用户列表失败');
     } finally {
-      setLoading(false);
+      setLoadingUsers(false);
+    }
+  };
+
+  const fetchRoles = async () => {
+    setLoadingRoles(true);
+    try {
+      const response = await fetch('/api/roles', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch roles');
+      const data = await response.json();
+      setRoles(data);
+      // Also update AuthContext roles
+      refreshRoles(); 
+    } catch (error) {
+      message.error('获取角色列表失败');
+    } finally {
+      setLoadingRoles(false);
     }
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'roles') fetchRoles();
+  }, [activeTab]);
 
-  const handleAdd = () => {
+  // Ensure we have roles for the user form select
+  useEffect(() => {
+    if (authRoles.length > 0) setRoles(authRoles);
+    else fetchRoles();
+  }, [authRoles]);
+
+
+  // --- User Handlers ---
+  const handleAddUser = () => {
     setEditingUser(null);
-    form.resetFields();
-    setModalVisible(true);
+    userForm.resetFields();
+    setUserModalVisible(true);
   };
 
-  const handleEdit = (record: User) => {
+  const handleEditUser = (record: User) => {
     setEditingUser(record);
-    form.setFieldsValue({
+    userForm.setFieldsValue({
       username: record.username,
       name: record.name,
       role: record.role,
     });
-    setModalVisible(true);
+    setUserModalVisible(true);
   };
 
-  const handleDelete = async (username: string) => {
+  const handleDeleteUser = async (username: string) => {
     try {
       const response = await fetch(`/api/users/${username}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) {
         const data = await response.json();
@@ -71,9 +106,9 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
-  const handleOk = async () => {
+  const handleUserOk = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await userForm.validateFields();
       const isEdit = !!editingUser;
       const url = isEdit ? `/api/users/${editingUser.username}` : '/api/users';
       const method = isEdit ? 'PUT' : 'POST';
@@ -93,38 +128,103 @@ export const UserManagementPage: React.FC = () => {
       }
 
       message.success(isEdit ? '用户更新成功' : '用户创建成功');
-      setModalVisible(false);
+      setUserModalVisible(false);
       fetchUsers();
     } catch (error: any) {
       message.error(error.message);
     }
   };
 
-  const columns = [
-    {
-      title: '用户名',
-      dataIndex: 'username',
-      key: 'username',
-    },
-    {
-      title: '姓名',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '角色',
-      dataIndex: 'role',
+  // --- Role Handlers ---
+  const handleAddRole = () => {
+    setEditingRole(null);
+    roleForm.resetFields();
+    // Default values
+    roleForm.setFieldsValue({
+      permissions: ['dashboard'],
+      canEdit: false,
+      canDelete: false
+    });
+    setRoleModalVisible(true);
+  };
+
+  const handleEditRole = (record: RoleDefinition) => {
+    setEditingRole(record);
+    roleForm.setFieldsValue({
+      id: record.id,
+      name: record.name,
+      description: record.description,
+      permissions: record.permissions.includes('*') 
+        ? builtinToolRegistry.list().map(t => t.id) 
+        : record.permissions,
+      canEdit: record.canEdit,
+      canDelete: record.canDelete,
+    });
+    setRoleModalVisible(true);
+  };
+
+  const handleDeleteRole = async (id: string) => {
+    try {
+      const response = await fetch(`/api/roles/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete role');
+      }
+      message.success('角色已删除');
+      fetchRoles();
+    } catch (error: any) {
+      message.error(error.message);
+    }
+  };
+
+  const handleRoleOk = async () => {
+    try {
+      const values = await roleForm.validateFields();
+      const isEdit = !!editingRole;
+      const url = isEdit ? `/api/roles/${editingRole.id}` : '/api/roles';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      // Check if all tools selected -> convert to '*'? Maybe not necessary for UI consistency
+      // but good for admin.
+      // For now, just save array.
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Operation failed');
+      }
+
+      message.success(isEdit ? '角色更新成功' : '角色创建成功');
+      setRoleModalVisible(false);
+      fetchRoles();
+    } catch (error: any) {
+      message.error(error.message);
+    }
+  };
+
+  // --- Columns ---
+  const userColumns = [
+    { title: '用户名', dataIndex: 'username', key: 'username' },
+    { title: '姓名', dataIndex: 'name', key: 'name' },
+    { 
+      title: '角色', 
+      dataIndex: 'role', 
       key: 'role',
-      render: (role: Role) => {
-        let color = 'geekblue';
-        if (role === 'admin') color = 'volcano';
-        if (role === 'operator') color = 'green';
-        return (
-          <Tag color={color} key={role}>
-            {role.toUpperCase()}
-          </Tag>
-        );
-      },
+      render: (roleId: string) => {
+        const roleDef = roles.find(r => r.id === roleId);
+        return <Tag color="geekblue">{roleDef?.name || roleId}</Tag>;
+      }
     },
     {
       title: '操作',
@@ -134,11 +234,11 @@ export const UserManagementPage: React.FC = () => {
           <Button 
             type="text" 
             icon={<EditOutlined />} 
-            onClick={() => handleEdit(record)}
-            disabled={record.username === 'admin' && user?.username !== 'admin'} // Protect default admin?
+            onClick={() => handleEditUser(record)}
+            disabled={record.username === 'admin' && user?.username !== 'admin'}
           />
           {record.username !== 'admin' && (
-            <Popconfirm title="确定要删除吗?" onConfirm={() => handleDelete(record.username)}>
+            <Popconfirm title="确定要删除吗?" onConfirm={() => handleDeleteUser(record.username)}>
               <Button type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           )}
@@ -147,66 +247,156 @@ export const UserManagementPage: React.FC = () => {
     },
   ];
 
+  const roleColumns = [
+    { title: 'ID', dataIndex: 'id', key: 'id' },
+    { title: '名称', dataIndex: 'name', key: 'name' },
+    { title: '描述', dataIndex: 'description', key: 'description' },
+    { 
+      title: '权限', 
+      key: 'permissions',
+      render: (_: any, record: RoleDefinition) => {
+        if (record.permissions.includes('*')) return <Tag color="red">所有权限</Tag>;
+        return (
+          <div style={{ maxWidth: 300 }}>
+            {record.permissions.map(p => {
+               const tool = builtinToolRegistry.getById(p);
+               return <Tag key={p}>{tool?.navLabel || p}</Tag>;
+            })}
+          </div>
+        );
+      }
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_: any, record: RoleDefinition) => (
+        <Space size="middle">
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            onClick={() => handleEditRole(record)}
+            // Prevent editing admin ID or critical system roles structure? 
+            // We allow editing permissions but backend blocks revoking admin * permission.
+          />
+          {!['admin', 'engineer', 'operator', 'viewer'].includes(record.id) && (
+            <Popconfirm title="确定要删除吗?" onConfirm={() => handleDeleteRole(record.id)}>
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
+  const allTools = builtinToolRegistry.list().map(t => ({ label: t.navLabel, value: t.id }));
+
   return (
     <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>用户管理</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          添加用户
-        </Button>
-      </div>
-      
-      <Table 
-        columns={columns} 
-        dataSource={users} 
-        rowKey="username" 
-        loading={loading}
-        pagination={{ pageSize: 10 }}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'users',
+            label: '用户管理',
+            children: (
+              <>
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
+                    添加用户
+                  </Button>
+                </div>
+                <Table 
+                  columns={userColumns} 
+                  dataSource={users} 
+                  rowKey="username" 
+                  loading={loadingUsers}
+                  pagination={{ pageSize: 10 }}
+                />
+              </>
+            )
+          },
+          {
+            key: 'roles',
+            label: '角色权限',
+            children: (
+              <>
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddRole}>
+                    创建新角色
+                  </Button>
+                </div>
+                <Table 
+                  columns={roleColumns} 
+                  dataSource={roles} 
+                  rowKey="id" 
+                  loading={loadingRoles}
+                  pagination={{ pageSize: 10 }}
+                />
+              </>
+            )
+          }
+        ]}
       />
 
+      {/* User Modal */}
       <Modal
         title={editingUser ? "编辑用户" : "添加用户"}
-        open={modalVisible}
-        onOk={handleOk}
-        onCancel={() => setModalVisible(false)}
+        open={userModalVisible}
+        onOk={handleUserOk}
+        onCancel={() => setUserModalVisible(false)}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="username"
-            label="用户名"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
+        <Form form={userForm} layout="vertical">
+          <Form.Item name="username" label="用户名" rules={[{ required: true }]}>
             <Input disabled={!!editingUser} />
           </Form.Item>
-          
-          <Form.Item
-            name="name"
-            label="姓名"
-            rules={[{ required: true, message: '请输入姓名' }]}
-          >
+          <Form.Item name="name" label="姓名" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-
-          <Form.Item
-            name="role"
-            label="角色"
-            rules={[{ required: true, message: '请选择角色' }]}
-          >
+          <Form.Item name="role" label="角色" rules={[{ required: true }]}>
             <Select>
-              <Option value="admin">Admin</Option>
-              <Option value="engineer">Engineer</Option>
-              <Option value="operator">Operator</Option>
-              <Option value="viewer">Viewer</Option>
+              {roles.map(r => (
+                <Option key={r.id} value={r.id}>{r.name}</Option>
+              ))}
             </Select>
           </Form.Item>
-
-          <Form.Item
-            name="password"
-            label={editingUser ? "密码 (留空则不修改)" : "密码"}
-            rules={[{ required: !editingUser, message: '请输入密码' }]}
-          >
+          <Form.Item name="password" label={editingUser ? "密码 (留空则不修改)" : "密码"} rules={[{ required: !editingUser }]}>
             <Input.Password />
           </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Role Modal */}
+      <Modal
+        title={editingRole ? "编辑角色" : "创建角色"}
+        open={roleModalVisible}
+        onOk={handleRoleOk}
+        onCancel={() => setRoleModalVisible(false)}
+        width={600}
+      >
+        <Form form={roleForm} layout="vertical">
+          <Form.Item name="id" label="角色ID" rules={[{ required: true }]} help="唯一标识符，如: manager">
+            <Input disabled={!!editingRole} />
+          </Form.Item>
+          <Form.Item name="name" label="角色名称" rules={[{ required: true }]}>
+            <Input placeholder="如: 生产经理" />
+          </Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input.TextArea />
+          </Form.Item>
+          
+          <Form.Item name="permissions" label="可访问页面" rules={[{ required: true }]}>
+            <Checkbox.Group options={allTools} />
+          </Form.Item>
+
+          <Space size={24}>
+            <Form.Item name="canEdit" label="允许编辑数据" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+            <Form.Item name="canDelete" label="允许删除数据" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </Space>
         </Form>
       </Modal>
     </div>

@@ -23,6 +23,7 @@ const DATA_FILE = path.join(__dirname, 'machines.json');
 const LOCATIONS_FILE = path.join(__dirname, 'locations.json');
 const MODELS_FILE = path.join(__dirname, 'machine_models.json');
 const USERS_FILE = path.join(__dirname, 'users.json');
+const ROLES_FILE = path.join(__dirname, 'roles.json');
 
 // Ensure data file exists
 if (!fs.existsSync(DATA_FILE)) {
@@ -41,6 +42,44 @@ if (!fs.existsSync(USERS_FILE)) {
     name: 'Administrator'
   };
   fs.writeJsonSync(USERS_FILE, [defaultAdmin], { spaces: 2 });
+}
+// Ensure roles file exists with default roles
+if (!fs.existsSync(ROLES_FILE)) {
+  const defaultRoles = [
+    { 
+      id: "admin", 
+      name: "管理员", 
+      description: "系统超级管理员，拥有所有权限", 
+      permissions: ["*"], 
+      canEdit: true, 
+      canDelete: true 
+    },
+    { 
+      id: "engineer", 
+      name: "工程师", 
+      description: "可以管理设备和工艺", 
+      permissions: ["dashboard", "machines", "templates", "settings"], 
+      canEdit: true, 
+      canDelete: false 
+    },
+    { 
+      id: "operator", 
+      name: "操作员", 
+      description: "仅限使用计算工具", 
+      permissions: ["pq2"], 
+      canEdit: false, 
+      canDelete: false 
+    },
+    { 
+      id: "viewer", 
+      name: "访客", 
+      description: "只读查看", 
+      permissions: ["dashboard", "machines", "pq2", "templates", "settings"], 
+      canEdit: false, 
+      canDelete: false 
+    }
+  ];
+  fs.writeJsonSync(ROLES_FILE, defaultRoles, { spaces: 2 });
 }
 
 // Auth Middleware
@@ -94,6 +133,101 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Roles Management
+app.get('/api/roles', authenticateToken, async (req, res) => {
+  try {
+    const roles = await fs.readJson(ROLES_FILE);
+    res.json(roles);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch roles' });
+  }
+});
+
+app.post('/api/roles', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { id, name, description, permissions, canEdit, canDelete } = req.body;
+    if (!id || !name) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const roles = await fs.readJson(ROLES_FILE);
+    if (roles.find(r => r.id === id)) {
+      return res.status(400).json({ error: 'Role ID already exists' });
+    }
+
+    const newRole = { id, name, description, permissions: permissions || [], canEdit: !!canEdit, canDelete: !!canDelete };
+    roles.push(newRole);
+    await fs.writeJson(ROLES_FILE, roles, { spaces: 2 });
+    
+    res.json(newRole);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create role' });
+  }
+});
+
+app.put('/api/roles/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, permissions, canEdit, canDelete } = req.body;
+    
+    if (id === 'admin') {
+      // Prevent modifying critical permissions of admin, but allow name/desc update if needed?
+      // Better to lock admin permissions.
+      if (permissions && !permissions.includes('*')) {
+         return res.status(400).json({ error: 'Cannot revoke admin permissions' });
+      }
+    }
+
+    const roles = await fs.readJson(ROLES_FILE);
+    const roleIndex = roles.findIndex(r => r.id === id);
+    
+    if (roleIndex === -1) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+
+    const role = roles[roleIndex];
+    if (name) role.name = name;
+    if (description !== undefined) role.description = description;
+    if (permissions) role.permissions = permissions;
+    if (canEdit !== undefined) role.canEdit = canEdit;
+    if (canDelete !== undefined) role.canDelete = canDelete;
+
+    roles[roleIndex] = role;
+    await fs.writeJson(ROLES_FILE, roles, { spaces: 2 });
+
+    res.json(role);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update role' });
+  }
+});
+
+app.delete('/api/roles/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (['admin', 'engineer', 'operator', 'viewer'].includes(id)) {
+      return res.status(400).json({ error: 'Cannot delete system roles' });
+    }
+
+    const roles = await fs.readJson(ROLES_FILE);
+    const newRoles = roles.filter(r => r.id !== id);
+    
+    if (roles.length === newRoles.length) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+
+    // Check if any user is using this role
+    const users = await fs.readJson(USERS_FILE);
+    if (users.some(u => u.role === id)) {
+      return res.status(400).json({ error: 'Cannot delete role assigned to users' });
+    }
+
+    await fs.writeJson(ROLES_FILE, newRoles, { spaces: 2 });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete role' });
   }
 });
 

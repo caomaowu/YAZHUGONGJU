@@ -6,9 +6,9 @@
     "name": "Administrator"
   },
   {
-    "username": "test",
-    "password": "$2b$10$HHuNurGeYQrcF2kGcW5pl.1GUI9xF21H7ozJd3VWOHNAnMRieVHa2",
+    "username": "test123456",
+    "password": "$2b$10$Aq.3ZhonK9xepF4AaWgUzuxHR3E6eOIvkWnUUIsnYLvkYR3kNFV0y",
     "role": "viewer",
-    "name": "test"
+    "name": "test123456"
   }
 ]
