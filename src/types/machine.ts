@@ -21,4 +21,32 @@ export interface DieCastingMachine {
   specs: MachineSpecs;
   avatar?: string;     // 机器图标/照片 URL
   purchaseDate?: string; // 采购日期
+  rawSpecs?: MachineModelSpecs; // 完整的原始规格数据（来自 JSON 模板）
+}
+
+export interface InjectionConfig {
+  冲头直径_mm: number | string;
+  压射力_KN: number | string;
+  射料行程_mm: number | string;
+  容量_铝_Kg: number | string;
+  铸造压力_MPa: number | string;
+  铸造面积_cm2: number | string;
+}
+
+export interface MachineModelSpecs {
+  型号: string;
+  锁模力_KN: number;
+  锁模行程_mm: number;
+  模具厚度_mm: { 最小: number; 最大: number };
+  模板尺寸_mm: string;
+  容模尺寸_mm: string;
+  压射配置: InjectionConfig[];
+  最大铸造面积_40MPa_cm2: number;
+  压射位置_mm: number | string;
+  冲头行程_mm: number;
+  压室法兰直径_mm: number | string;
+  法兰高度_mm: number | string;
+  顶出力_KN: number;
+  顶出行程_mm: number;
+  [key: string]: any; // Allow extra fields
 }

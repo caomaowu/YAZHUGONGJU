@@ -17,10 +17,15 @@ app.use(bodyParser.json({ limit: '50mb' })); // Allow large payloads for base64 
 
 // Data file path
 const DATA_FILE = path.join(__dirname, 'machines.json');
+const LOCATIONS_FILE = path.join(__dirname, 'locations.json');
+const MODELS_FILE = path.join(__dirname, 'machine_models.json');
 
 // Ensure data file exists
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeJsonSync(DATA_FILE, []);
+}
+if (!fs.existsSync(LOCATIONS_FILE)) {
+  fs.writeJsonSync(LOCATIONS_FILE, ["一车间", "二车间", "新厂区"]);
 }
 
 // Routes
@@ -44,6 +49,41 @@ app.post('/api/machines', async (req, res) => {
   } catch (error) {
     console.error('Error saving machines:', error);
     res.status(500).json({ error: 'Failed to save machines data' });
+  }
+});
+
+// Get locations
+app.get('/api/locations', async (req, res) => {
+  try {
+    const data = await fs.readJson(LOCATIONS_FILE);
+    res.json(data);
+  } catch (error) {
+    console.error('Error reading locations:', error);
+    // Return default if error or file missing
+    res.json(["一车间", "二车间", "新厂区"]); 
+  }
+});
+
+// Update locations
+app.post('/api/locations', async (req, res) => {
+  try {
+    const locations = req.body;
+    await fs.writeJson(LOCATIONS_FILE, locations, { spaces: 2 });
+    res.json({ success: true, message: 'Locations saved successfully' });
+  } catch (error) {
+    console.error('Error saving locations:', error);
+    res.status(500).json({ error: 'Failed to save locations data' });
+  }
+});
+
+// Get machine models
+app.get('/api/machine-models', async (req, res) => {
+  try {
+    const data = await fs.readJson(MODELS_FILE);
+    res.json(data);
+  } catch (error) {
+    console.error('Error reading machine models:', error);
+    res.status(500).json({ error: 'Failed to read machine models data' });
   }
 });
 

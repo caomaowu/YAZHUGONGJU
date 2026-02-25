@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Form, Input, InputNumber, Select, Button, Space, Divider, Row, Col, Upload, message, Typography } from 'antd';
 import { UploadOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import type { DieCastingMachine } from '../../types/machine';
@@ -9,11 +9,57 @@ interface MachineEditFormProps {
   initialValues: DieCastingMachine;
   onSave: (values: DieCastingMachine) => void;
   onCancel: () => void;
+  locations?: string[];
+  machineModels?: any[];
 }
 
-export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues, onSave, onCancel }) => {
+export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues, onSave, onCancel, locations = [], machineModels = [] }) => {
   const [form] = Form.useForm();
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(initialValues.avatar);
+  const baseRawSpecsRef = useRef<any>(initialValues.rawSpecs || {});
+
+  const handleModelSelect = (modelName: string) => {
+    const originalModel = machineModels.find((m: any) => m["型号"] === modelName);
+    if (originalModel) {
+      // Deep clone to ensure we don't modify the source template
+      const selectedModel = JSON.parse(JSON.stringify(originalModel));
+      
+      // Update base raw specs to the new model
+      baseRawSpecsRef.current = selectedModel;
+      
+      // Parse tie bar spacing from "740x740" format
+      let tieBarH = 0;
+      let tieBarV = 0;
+      // Use 容模尺寸_mm (Mold accommodation size) as tie bar spacing approximation if not explicit
+      // Or try to find explicit mapping. The JSON has "模板尺寸_mm" and "容模尺寸_mm"
+      // Usually "容模尺寸" (Mold Space) is the space between tie bars.
+      if (selectedModel["容模尺寸_mm"]) {
+        const dims = selectedModel["容模尺寸_mm"].split(/×|x/);
+        if (dims.length === 2) {
+          tieBarH = parseFloat(dims[0]);
+          tieBarV = parseFloat(dims[1]);
+        }
+      }
+
+      form.setFieldsValue({
+        model: selectedModel["型号"],
+        tonnage: selectedModel["锁模力_KN"] ? Math.round(selectedModel["锁模力_KN"] / 10) : 0, // Approx conversion KN -> Ton
+        specs: {
+          clampingForce: selectedModel["锁模力_KN"],
+          tieBarSpacingH: tieBarH,
+          tieBarSpacingV: tieBarV,
+          dieHeightMin: selectedModel["模具厚度_mm"]?.["最小"] || 0,
+          dieHeightMax: selectedModel["模具厚度_mm"]?.["最大"] || 0,
+          ejectionStroke: selectedModel["顶出行程_mm"] || 0,
+          // Injection rate logic might be complex as it's an array in JSON. 
+          // We can pick the max from the array or leave empty.
+          injectionRate: undefined 
+        },
+        rawSpecs: selectedModel
+      });
+      message.success(`已加载 ${modelName} 的参数模板`);
+    }
+  };
 
   // Initialize form values
   const getInitialValues = () => ({
@@ -26,6 +72,12 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
   });
 
   const handleFinish = (values: any) => {
+    // Merge base raw specs (either initial or from selected model) with form values
+    const mergedRawSpecs = {
+      ...(baseRawSpecsRef.current || {}),
+      ...(values.rawSpecs || {})
+    };
+
     // Reconstruct the machine object
     const updatedMachine: DieCastingMachine = {
       ...initialValues,
@@ -37,7 +89,8 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
         ejectionStroke: values.specs.ejectionStroke,
         injectionRate: values.specs.injectionRate,
         tieBarSpacing: [values.specs.tieBarSpacingH, values.specs.tieBarSpacingV],
-      }
+      },
+      rawSpecs: mergedRawSpecs
     };
     onSave(updatedMachine);
   };
@@ -66,6 +119,21 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
         initialValues={getInitialValues()}
       >
         <Divider orientation="left">基本信息</Divider>
+        <Form.Item label="快速选择型号模板">
+          <Select 
+            placeholder="从数据库选择标准型号以自动填充参数" 
+            onChange={handleModelSelect}
+            showSearch
+            optionFilterProp="children"
+          >
+            {machineModels.map((m: any) => (
+              <Select.Option key={m["型号"]} value={m["型号"]}>
+                {m["型号"]} ({Math.round(m["锁模力_KN"]/10)}T)
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="name" label="设备名称" rules={[{ required: true }]}>
@@ -94,9 +162,17 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
           <Col span={12}>
             <Form.Item name="location" label="所属车间">
               <Select>
-                <Select.Option value="一车间">一车间</Select.Option>
-                <Select.Option value="二车间">二车间</Select.Option>
-                <Select.Option value="新厂区">新厂区</Select.Option>
+                {locations && locations.length > 0 ? (
+                  locations.map(loc => (
+                    <Select.Option key={loc} value={loc}>{loc}</Select.Option>
+                  ))
+                ) : (
+                  <>
+                    <Select.Option value="一车间">一车间</Select.Option>
+                    <Select.Option value="二车间">二车间</Select.Option>
+                    <Select.Option value="新厂区">新厂区</Select.Option>
+                  </>
+                )}
               </Select>
             </Form.Item>
           </Col>
@@ -177,14 +253,87 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
           <InputNumber style={{ width: '100%' }} min={0} />
         </Form.Item>
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} block size="large">
-            保存修改
-          </Button>
-          <Button onClick={onCancel} icon={<CloseOutlined />} block size="large">
-            取消
-          </Button>
-        </div>
+        <Form.Item name="rawSpecs" hidden>
+          <Input />
+        </Form.Item>
+
+        <Divider orientation="left">详细规格参数 (可覆写)</Divider>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '模具厚度_mm', '最小']} label="最小模厚 (mm)">
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '模具厚度_mm', '最大']} label="最大模厚 (mm)">
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '模板尺寸_mm']} label="模板尺寸 (mm)">
+              <Input />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '容模尺寸_mm']} label="容模尺寸 (mm)">
+              <Input />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '最大铸造面积_40MPa_cm2']} label="最大铸造面积 (cm²)">
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '压射位置_mm']} label="压射位置 (mm)">
+              <Input />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '冲头行程_mm']} label="冲头行程 (mm)">
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '顶出力_KN']} label="顶出力 (KN)">
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '压室法兰直径_mm']} label="压室法兰直径 (mm)">
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '法兰高度_mm']} label="法兰高度 (mm)">
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item name={['rawSpecs', '顶出行程_mm']} label="顶出行程 (mm)">
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item>
+          <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button onClick={onCancel}>取消</Button>
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+              保存更改
+            </Button>
+          </Space>
+        </Form.Item>
       </Form>
     </div>
   );
