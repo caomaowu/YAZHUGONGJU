@@ -4,12 +4,15 @@ import bodyParser from 'body-parser';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3001;
+const SECRET_KEY = 'your-secret-key-change-in-production'; // TODO: Use env var
 
 // Middleware
 app.use(cors());
@@ -19,6 +22,7 @@ app.use(bodyParser.json({ limit: '50mb' })); // Allow large payloads for base64 
 const DATA_FILE = path.join(__dirname, 'machines.json');
 const LOCATIONS_FILE = path.join(__dirname, 'locations.json');
 const MODELS_FILE = path.join(__dirname, 'machine_models.json');
+const USERS_FILE = path.join(__dirname, 'users.json');
 
 // Ensure data file exists
 if (!fs.existsSync(DATA_FILE)) {
@@ -27,8 +31,159 @@ if (!fs.existsSync(DATA_FILE)) {
 if (!fs.existsSync(LOCATIONS_FILE)) {
   fs.writeJsonSync(LOCATIONS_FILE, ["一车间", "二车间", "新厂区"]);
 }
+// Ensure users file exists with default admin
+if (!fs.existsSync(USERS_FILE)) {
+  // admin / admin123
+  const defaultAdmin = {
+    username: 'admin',
+    password: '$2b$10$xCogtsvQ99yOzOU.yg94remGkisbTCj4OcLhmr5RgBKmwfXpTLk4y',
+    role: 'admin',
+    name: 'Administrator'
+  };
+  fs.writeJsonSync(USERS_FILE, [defaultAdmin], { spaces: 2 });
+}
+
+// Auth Middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, SECRET_KEY, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+
+const requireRole = (roles) => {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.sendStatus(403);
+    }
+    next();
+  };
+};
 
 // Routes
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const users = await fs.readJson(USERS_FILE);
+    const user = users.find(u => u.username === username);
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { username: user.username, role: user.role, name: user.name },
+      SECRET_KEY,
+      { expiresIn: '24h' }
+    );
+
+    res.json({ token, user: { username: user.username, role: user.role, name: user.name } });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// User Management (Admin only)
+app.get('/api/users', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const users = await fs.readJson(USERS_FILE);
+    // Return users without passwords
+    const safeUsers = users.map(({ password, ...u }) => u);
+    res.json(safeUsers);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/users', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { username, password, role, name } = req.body;
+    if (!username || !password || !role) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const users = await fs.readJson(USERS_FILE);
+    if (users.find(u => u.username === username)) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = { username, password: hashedPassword, role, name: name || username };
+    
+    users.push(newUser);
+    await fs.writeJson(USERS_FILE, users, { spaces: 2 });
+    
+    const { password: _, ...safeUser } = newUser;
+    res.json(safeUser);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+app.put('/api/users/:username', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { username } = req.params;
+    const { password, role, name } = req.body;
+    
+    const users = await fs.readJson(USERS_FILE);
+    const userIndex = users.findIndex(u => u.username === username);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = users[userIndex];
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+    if (role) user.role = role;
+    if (name) user.name = name;
+
+    users[userIndex] = user;
+    await fs.writeJson(USERS_FILE, users, { spaces: 2 });
+
+    const { password: _, ...safeUser } = user;
+    res.json(safeUser);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.delete('/api/users/:username', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { username } = req.params;
+    if (username === 'admin') {
+      return res.status(400).json({ error: 'Cannot delete default admin' });
+    }
+
+    const users = await fs.readJson(USERS_FILE);
+    const newUsers = users.filter(u => u.username !== username);
+    
+    if (users.length === newUsers.length) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    await fs.writeJson(USERS_FILE, newUsers, { spaces: 2 });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 // Get all machines
 app.get('/api/machines', async (req, res) => {
   try {
@@ -86,6 +241,18 @@ app.get('/api/machine-models', async (req, res) => {
     res.status(500).json({ error: 'Failed to read machine models data' });
   }
 });
+
+// Serve static files from the React app
+const distPath = path.join(__dirname, '../dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+
+  // The "catchall" handler: for any request that doesn't
+  // match one above, send back React's index.html file.
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Local API Server running at http://localhost:${PORT}`);

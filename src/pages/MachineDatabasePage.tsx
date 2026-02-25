@@ -7,17 +7,24 @@ import { LocationManagerModal } from '../components/machine/LocationManagerModal
 import { AddMachineModal } from '../components/machine/AddMachineModal';
 import { mockMachines } from '../mock/machines';
 import type { DieCastingMachine } from '../types/machine';
+import { useAuth } from '../core/auth/AuthContext';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
 export const MachineDatabasePage: React.FC = () => {
   const { token } = antTheme.useToken();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState<string>('全部');
   const [selectedMachine, setSelectedMachine] = useState<DieCastingMachine | null>(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  
+  // Permissions
+  const canEdit = user?.role === 'admin' || user?.role === 'engineer';
+  const canDelete = user?.role === 'admin';
+  const canAdd = user?.role === 'admin' || user?.role === 'engineer';
   
   // State to hold machines
   const [machines, setMachines] = useState<DieCastingMachine[]>([]);
@@ -206,15 +213,17 @@ export const MachineDatabasePage: React.FC = () => {
             <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#4C1D95' }}>压铸机数据库</Title>
             <Text type="secondary">管理和查看所有压铸设备及其性能参数</Text>
           </div>
-          <Button 
-            type="primary" 
-            size="large" 
-            icon={<PlusOutlined />} 
-            style={{ borderRadius: 12 }}
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            新增设备
-          </Button>
+          {canAdd && (
+            <Button 
+              type="primary" 
+              size="large" 
+              icon={<PlusOutlined />} 
+              style={{ borderRadius: 12 }}
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              新增设备
+            </Button>
+          )}
         </div>
 
         {/* Toolbar Section */}
@@ -245,12 +254,14 @@ export const MachineDatabasePage: React.FC = () => {
                 onChange={setLocationFilter}
                 style={{ background: 'transparent' }}
              />
-             <Button 
-               icon={<SettingOutlined />} 
-               type="text" 
-               onClick={() => setIsLocationModalOpen(true)}
-               title="管理车间/区域"
-             />
+             {canEdit && (
+               <Button 
+                 icon={<SettingOutlined />} 
+                 type="text" 
+                 onClick={() => setIsLocationModalOpen(true)}
+                 title="管理车间/区域"
+               />
+             )}
            </div>
 
            <div style={{ height: 24, width: 1, background: token.colorBorderSecondary }} />
@@ -288,8 +299,8 @@ export const MachineDatabasePage: React.FC = () => {
            machine={selectedMachine} 
            open={!!selectedMachine} 
            onClose={() => setSelectedMachine(null)} 
-           onSave={handleMachineUpdate}
-           onDelete={handleDeleteMachine}
+           onSave={canEdit ? handleMachineUpdate : undefined}
+           onDelete={canDelete ? handleDeleteMachine : undefined}
            locations={availableLocations}
            machineModels={machineModels}
         />

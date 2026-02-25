@@ -1,4 +1,4 @@
-import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
@@ -6,6 +6,7 @@ import { PQ2Page } from '../pages/PQ2Page'
 import { SettingsPage } from '../pages/SettingsPage'
 import { TemplatesPage } from '../pages/TemplatesPage'
 import { MachineDatabasePage } from '../pages/MachineDatabasePage'
+import { UserManagementPage } from '../pages/UserManagementPage'
 
 function createBuiltinTools(): ToolDefinition[] {
   return [
@@ -17,6 +18,7 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <AppstoreOutlined />,
       order: 10,
       element: <DashboardPage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
     },
     {
       id: 'machines',
@@ -26,6 +28,7 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <DatabaseOutlined />,
       order: 15,
       element: <MachineDatabasePage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
     },
     {
       id: 'pq2',
@@ -35,6 +38,7 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <LineChartOutlined />,
       order: 20,
       element: <PQ2Page />,
+      allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
     },
     {
       id: 'templates',
@@ -44,6 +48,7 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <ExperimentOutlined />,
       order: 30,
       element: <TemplatesPage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
     },
     {
       id: 'settings',
@@ -53,6 +58,17 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <SettingOutlined />,
       order: 40,
       element: <SettingsPage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
+    },
+    {
+      id: 'users',
+      title: '用户管理',
+      navLabel: '用户管理',
+      route: '/users',
+      icon: <TeamOutlined />,
+      order: 100,
+      element: <UserManagementPage />,
+      allowedRoles: ['admin'],
     },
   ]
 }
@@ -62,4 +78,5 @@ export const builtinToolRegistry = (() => {
   for (const tool of createBuiltinTools()) registry.register(tool)
   return registry
 })()
+
 

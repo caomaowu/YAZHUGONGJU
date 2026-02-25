@@ -207,9 +207,11 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
 
           <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(0,0,0,0.06)', background: '#fff' }}>
             <div style={{ display: 'flex', gap: 12 }}>
-              <Button type="primary" icon={<EditOutlined />} style={{ flex: 1 }} size="large" onClick={() => setIsEditing(true)}>
-                编辑
-              </Button>
+              {onSave && (
+                <Button type="primary" icon={<EditOutlined />} style={{ flex: 1 }} size="large" onClick={() => setIsEditing(true)}>
+                  编辑
+                </Button>
+              )}
               <Button icon={<PrinterOutlined />} style={{ flex: 1 }} size="large">
                 导出
               </Button>

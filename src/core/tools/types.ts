@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { Role } from '../auth/types'
 
 export type ToolId = string
 
@@ -11,5 +12,6 @@ export type ToolDefinition = {
   description?: string
   order?: number
   element: ReactNode
+  allowedRoles?: Role[]
 }
 

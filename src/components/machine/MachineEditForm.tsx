@@ -1,9 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Form, Input, InputNumber, Select, Button, Space, Divider, Row, Col, Upload, message, Typography } from 'antd';
-import { UploadOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import { Form, Input, InputNumber, Select, Button, Space, Divider, Row, Col, Upload, message } from 'antd';
+import { UploadOutlined, SaveOutlined } from '@ant-design/icons';
 import type { DieCastingMachine } from '../../types/machine';
-
-const { Title } = Typography;
 
 interface MachineEditFormProps {
   initialValues: DieCastingMachine;
@@ -118,7 +116,7 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
         onFinish={handleFinish}
         initialValues={getInitialValues()}
       >
-        <Divider orientation="left">基本信息</Divider>
+        <Divider orientation={"left" as const}>基本信息</Divider>
         <Form.Item label="快速选择型号模板">
           <Select 
             placeholder="从数据库选择标准型号以自动填充参数" 
@@ -209,7 +207,7 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
            </Space>
         </Form.Item>
 
-        <Divider orientation="left">工艺参数</Divider>
+        <Divider orientation={"left" as const}>工艺参数</Divider>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name={['specs', 'clampingForce']} label="锁模力 (kN)" rules={[{ required: true }]}>
@@ -257,7 +255,7 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
           <Input />
         </Form.Item>
 
-        <Divider orientation="left">详细规格参数 (可覆写)</Divider>
+        <Divider orientation={"left" as const}>详细规格参数 (可覆写)</Divider>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name={['rawSpecs', '模具厚度_mm', '最小']} label="最小模厚 (mm)">
