@@ -15,7 +15,7 @@ import {
   Typography,
   theme,
 } from 'antd'
-import { DownloadOutlined, FileImageOutlined, SyncOutlined } from '@ant-design/icons'
+import { DownloadOutlined, FileImageOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useSharedValue } from '../core/state/hooks'
 import { EChart } from '../components/charts/EChart'
 import { buildPQ2ChartOption } from '../tools/pq2/chart'
@@ -50,7 +50,6 @@ export function PQ2Page() {
 
   const [form] = Form.useForm<PQ2Params>()
   const chartRef = useRef<echarts.ECharts | null>(null)
-  const linkageLockRef = useRef(false)
 
   const initialParams = useMemo(() => {
     const base = savedParams ?? DEFAULT_PARAMS
@@ -259,36 +258,8 @@ export function PQ2Page() {
               layout="vertical"
               initialValues={initialParams}
               onValuesChange={(_, next) => {
-                if (linkageLockRef.current) {
-                  setSavedParams(next)
-                  return
-                }
-                const material = getMaterialById(next.materialId)
-                const density = next.densityKgM3 > 0 ? next.densityKgM3 : material.densityKgM3
-                const gateArea = next.useCustomGateArea
-                  ? next.gateAreaMm2
-                  : Math.max(0, next.gateWidthMm) * Math.max(0, next.gateThicknessMm)
-
-                const densityKgCm3 = density / 1e6
-                const linked =
-                  next.inputBasis === 'mass'
-                    ? {
-                        castingVolumeCm3: densityKgCm3 > 0 ? next.castingMassKg / densityKgCm3 : 0,
-                      }
-                    : {
-                        castingMassKg: next.castingVolumeCm3 * densityKgCm3,
-                      }
-
-                const merged = {
-                  ...next,
-                  densityKgM3: density,
-                  gateAreaMm2: gateArea,
-                  ...linked,
-                }
-                linkageLockRef.current = true
-                form.setFieldsValue(merged)
-                linkageLockRef.current = false
-                setSavedParams(merged)
+                // 参数联动已在 computePQ2 中处理，这里只需保存参数
+                setSavedParams(next)
               }}
             >
               <Space direction="vertical" size={10} style={{ width: '100%' }}>
@@ -472,7 +443,7 @@ export function PQ2Page() {
                 </div>
 
                 <Button
-                  icon={<SyncOutlined />}
+                  icon={<ReloadOutlined />}
                   block
                   onClick={() => {
                     const material = getMaterialById(form.getFieldValue('materialId'))

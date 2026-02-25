@@ -101,12 +101,38 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
   const qMax2 = qMaxM3s * qMaxM3s
   const mPaPerM6s2 = qMax2 > 0 ? pMaxPa / qMax2 : 0
 
+  // 计算理论交点位置，用于指导采样
+  const intersectQ2 =
+    dieSlopePaPerM6s2 + mPaPerM6s2 > 0 ? (pMaxPa - p0Pa) / (dieSlopePaPerM6s2 + mPaPerM6s2) : NaN
+  const intersectQM3s = Math.sqrt(Math.max(0, intersectQ2))
+
+  // 扩大采样范围，确保包含交点和足够的余量
+  const qUpper = Math.max(
+    qMaxM3s > 0 ? qMaxM3s * 1.15 : 0, // 扩大到 115%
+    intersectQM3s > 0 ? intersectQM3s * 1.1 : 0, // 确保交点可见
+    qRequiredM3s * 1.1 // 确保工作点可见
+  )
+
+  // 生成采样点，在交点附近使用更密集的采样
   const curve: PQ2CurveSample[] = []
   const sampleCount = 220
-  const qUpper = qMaxM3s > 0 ? qMaxM3s * 1.02 : 0
+  const intersectRatio = qUpper > 0 ? intersectQM3s / qUpper : 0.5
 
   for (let i = 0; i <= sampleCount; i += 1) {
-    const q = (qUpper * i) / sampleCount
+    // 使用非线性采样，在交点附近更密集
+    let t = i / sampleCount
+    if (Number.isFinite(intersectRatio) && intersectRatio > 0.1 && intersectRatio < 0.9) {
+      // 在交点附近增加采样密度
+      const focus = intersectRatio
+      const normalizedT = (t - focus) * 2 // 映射到 [-1, 1] 范围
+      if (Math.abs(normalizedT) < 0.5) {
+        // 在交点附近使用更密集的采样
+        t = focus + (t - focus) * 0.5
+      }
+    }
+    t = Math.max(0, Math.min(1, t))
+
+    const q = qUpper * t
     const q2 = q * q
     const pMachinePa = pMaxPa - mPaPerM6s2 * q2
     const pDiePa = p0Pa + dieSlopePaPerM6s2 * q2
@@ -130,9 +156,7 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
   const pMachineAtRequiredMPa = paToMPa(Math.max(0, pMachineAtRequiredPa))
   const marginMPa = pMachineAtRequiredMPa - pRequiredMPa
 
-  const intersectQ2 =
-    dieSlopePaPerM6s2 + mPaPerM6s2 > 0 ? (pMaxPa - p0Pa) / (dieSlopePaPerM6s2 + mPaPerM6s2) : NaN
-
+  // 使用之前计算的交点位置
   const intersect =
     Number.isFinite(intersectQ2) && intersectQ2 > 0
       ? (() => {
