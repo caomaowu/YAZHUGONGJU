@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Select, message, Tag, Space, Popconfirm, Tabs, Checkbox, Switch } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useAuth } from '../core/auth/AuthContext';
-import type { Role, User, RoleDefinition } from '../core/auth/types';
+import { useAuth } from '../core/auth/useAuth';
+import type { User, RoleDefinition } from '../core/auth/types';
 import { builtinToolRegistry } from '../tools/builtinRegistry';
 
 const { Option } = Select;
@@ -26,7 +26,7 @@ export const UserManagementPage: React.FC = () => {
   const [roleForm] = Form.useForm();
 
   // --- Fetch Data ---
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
       const response = await fetch('/api/users', {
@@ -35,14 +35,14 @@ export const UserManagementPage: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
       setUsers(data);
-    } catch (error) {
+    } catch {
       message.error('获取用户列表失败');
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [token]);
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     setLoadingRoles(true);
     try {
       const response = await fetch('/api/roles', {
@@ -51,24 +51,21 @@ export const UserManagementPage: React.FC = () => {
       if (!response.ok) throw new Error('Failed to fetch roles');
       const data = await response.json();
       setRoles(data);
-      // Also update AuthContext roles
-      refreshRoles(); 
-    } catch (error) {
+    } catch {
       message.error('获取角色列表失败');
     } finally {
       setLoadingRoles(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'roles') fetchRoles();
-  }, [activeTab]);
+  }, [activeTab, fetchUsers, fetchRoles]);
 
   // Ensure we have roles for the user form select
   useEffect(() => {
     if (authRoles.length > 0) setRoles(authRoles);
-    else fetchRoles();
   }, [authRoles]);
 
 
@@ -101,8 +98,9 @@ export const UserManagementPage: React.FC = () => {
       }
       message.success('用户已删除');
       fetchUsers();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : '删除用户失败';
+      message.error(messageText);
     }
   };
 
@@ -130,8 +128,9 @@ export const UserManagementPage: React.FC = () => {
       message.success(isEdit ? '用户更新成功' : '用户创建成功');
       setUserModalVisible(false);
       fetchUsers();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : '操作失败';
+      message.error(messageText);
     }
   };
 
@@ -175,8 +174,10 @@ export const UserManagementPage: React.FC = () => {
       }
       message.success('角色已删除');
       fetchRoles();
-    } catch (error: any) {
-      message.error(error.message);
+      refreshRoles();
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : '删除角色失败';
+      message.error(messageText);
     }
   };
 
@@ -208,8 +209,10 @@ export const UserManagementPage: React.FC = () => {
       message.success(isEdit ? '角色更新成功' : '角色创建成功');
       setRoleModalVisible(false);
       fetchRoles();
-    } catch (error: any) {
-      message.error(error.message);
+      refreshRoles();
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : '操作失败';
+      message.error(messageText);
     }
   };
 
@@ -229,7 +232,7 @@ export const UserManagementPage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_: any, record: User) => (
+      render: (_: unknown, record: User) => (
         <Space size="middle">
           <Button 
             type="text" 
@@ -254,7 +257,7 @@ export const UserManagementPage: React.FC = () => {
     { 
       title: '权限', 
       key: 'permissions',
-      render: (_: any, record: RoleDefinition) => {
+      render: (_: unknown, record: RoleDefinition) => {
         if (record.permissions.includes('*')) return <Tag color="red">所有权限</Tag>;
         return (
           <div style={{ maxWidth: 300 }}>
@@ -269,7 +272,7 @@ export const UserManagementPage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_: any, record: RoleDefinition) => (
+      render: (_: unknown, record: RoleDefinition) => (
         <Space size="middle">
           <Button 
             type="text" 

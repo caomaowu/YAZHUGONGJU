@@ -14,7 +14,8 @@ import { useTheme } from './core/state/themeState'
 import { lavenderTheme } from './theme/lavenderTheme'
 import { darkTheme } from './theme/darkTheme'
 import { ThemeToggle } from './components/ThemeToggle'
-import { AuthProvider, useAuth } from './core/auth/AuthContext'
+import { AuthProvider } from './core/auth/AuthContext'
+import { useAuth } from './core/auth/useAuth'
 import { LoginPage } from './components/auth/Login'
 import './App.css'
 
@@ -23,15 +24,15 @@ function MainLayout() {
   const [query, setQuery] = useState('')
   const { theme } = useTheme()
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth()
 
   const allTools = useMemo(() => builtinToolRegistry.list(), [])
   
   // Calculate allowed tools for routing guard only
   const allowedTools = useMemo(() => {
     if (!user) return []
-    return allTools.filter(t => !t.allowedRoles || t.allowedRoles.includes(user.role))
-  }, [allTools, user])
+    return allTools.filter(t => !t.allowedRoles || hasPermission(t.id))
+  }, [allTools, user, hasPermission])
 
   // Display ALL tools in menu, but mark restricted ones
   const tools = allTools;
@@ -69,7 +70,7 @@ function MainLayout() {
       : tools
       
     return list.map((t) => {
-      const isAllowed = !t.allowedRoles || (user && t.allowedRoles.includes(user.role));
+      const isAllowed = !t.allowedRoles || hasPermission(t.id)
       return { 
         key: t.id, 
         icon: isAllowed ? t.icon : <LockOutlined style={{ color: '#ff4d4f' }} />, 
@@ -81,7 +82,7 @@ function MainLayout() {
         disabled: false // We handle click manually
       };
     })
-  }, [query, tools, user])
+  }, [query, tools, hasPermission])
 
   if (isLoading) {
     return (
@@ -137,7 +138,7 @@ function MainLayout() {
             if (!tool) return
             
             // Permission check
-            if (tool.allowedRoles && (!user || !tool.allowedRoles.includes(user.role))) {
+            if (tool.allowedRoles && !hasPermission(tool.id)) {
               message.info('暂未开放');
               return;
             }

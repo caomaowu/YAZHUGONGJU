@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { useAuth } from '../../core/auth/AuthContext';
+import { useAuth } from '../../core/auth/useAuth';
 import { useHashPath } from '../../core/router/hash';
 
 const { Title } = Typography;
@@ -11,7 +11,7 @@ export const LoginPage: React.FC = () => {
   const { navigate } = useHashPath();
   const [loading, setLoading] = useState(false);
 
-  const onFinish = async (values: any) => {
+  const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
       const response = await fetch('/api/auth/login', {
@@ -31,8 +31,9 @@ export const LoginPage: React.FC = () => {
       login(data.token, data.user);
       message.success('登录成功');
       navigate('/dashboard'); 
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : '登录失败';
+      message.error(messageText);
     } finally {
       setLoading(false);
     }
@@ -63,7 +64,7 @@ export const LoginPage: React.FC = () => {
             欢迎登录
           </Title>
           <Typography.Text type="secondary">
-            压铸工艺计算与管理工具
+            压铸岛
           </Typography.Text>
         </div>
 

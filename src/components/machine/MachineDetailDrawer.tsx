@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Drawer, Descriptions, Tag, Button, Typography, Divider, Image, Popconfirm, theme as antTheme, Tabs, Table } from 'antd';
+import React, { useState } from 'react';
+import { Drawer, Descriptions, Tag, Button, Typography, Image, Popconfirm, theme as antTheme, Tabs, Table } from 'antd';
 import { CloseOutlined, PrinterOutlined, EditOutlined, ZoomInOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { DieCastingMachine, MachineModelSpecs, InjectionConfig } from '../../types/machine';
+import type { DieCastingMachine, MachineModelSpecs } from '../../types/machine';
 import { MachineRadar } from './MachineRadar';
 import { MachineEditForm } from './MachineEditForm';
 
@@ -14,19 +14,18 @@ interface MachineDetailDrawerProps {
   onSave?: (updatedMachine: DieCastingMachine) => void;
   onDelete?: (id: string) => void;
   locations?: string[];
-  machineModels?: any[];
+  machineModels?: MachineModelSpecs[];
 }
 
 export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machine, open, onClose, onSave, onDelete, locations = [], machineModels = [] }) => {
   const { token } = antTheme.useToken();
   const [isEditing, setIsEditing] = useState(false);
 
-  // Reset editing state when drawer closes or machine changes
-  useEffect(() => {
-    if (!open) setIsEditing(false);
-  }, [open, machine]);
-
   if (!machine) return null;
+  const handleClose = () => {
+    setIsEditing(false);
+    onClose();
+  };
 
   const handleSave = (updatedMachine: DieCastingMachine) => {
     if (onSave) {
@@ -159,7 +158,7 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
       title={null}
       placement="right"
       width={900}
-      onClose={onClose}
+      onClose={handleClose}
       open={open}
       closeIcon={null}
       styles={{
@@ -184,7 +183,7 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
         <Button 
            type="text" 
            icon={<CloseOutlined />} 
-           onClick={onClose} 
+           onClick={handleClose} 
            style={{ borderRadius: '50%', width: 32, height: 32 }}
         />
       </div>

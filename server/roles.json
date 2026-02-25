@@ -1,0 +1,59 @@
+[
+  {
+    "id": "admin",
+    "name": "管理员",
+    "description": "系统超级管理员，拥有所有权限",
+    "permissions": [
+      "*"
+    ],
+    "canEdit": true,
+    "canDelete": true
+  },
+  {
+    "id": "engineer",
+    "name": "工程师",
+    "description": "可以管理设备和工艺",
+    "permissions": [
+      "dashboard",
+      "machines",
+      "templates",
+      "settings"
+    ],
+    "canEdit": true,
+    "canDelete": false
+  },
+  {
+    "id": "operator",
+    "name": "操作员",
+    "description": "仅限使用计算工具",
+    "permissions": [
+      "pq2"
+    ],
+    "canEdit": false,
+    "canDelete": false
+  },
+  {
+    "id": "viewer",
+    "name": "访客",
+    "description": "只读查看",
+    "permissions": [
+      "dashboard",
+      "machines",
+      "pq2",
+      "templates",
+      "settings"
+    ],
+    "canEdit": false,
+    "canDelete": false
+  },
+  {
+    "id": "12",
+    "name": "12233",
+    "permissions": [
+      "dashboard",
+      "machines"
+    ],
+    "canEdit": false,
+    "canDelete": false
+  }
+]

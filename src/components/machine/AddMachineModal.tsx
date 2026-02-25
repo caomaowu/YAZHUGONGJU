@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, Input, List, Button, Tag, Space, Typography, Empty, Card } from 'antd';
+import { Modal, Input, List, Button, Tag, Typography, Empty, Card } from 'antd';
 import { SearchOutlined, CheckCircleFilled } from '@ant-design/icons';
+import type { MachineModelSpecs } from '../../types/machine';
 
 const { Text, Title } = Typography;
 
@@ -8,7 +9,7 @@ interface AddMachineModalProps {
   open: boolean;
   onClose: () => void;
   onCreate: (modelName: string) => void;
-  machineModels: any[];
+  machineModels: MachineModelSpecs[];
 }
 
 export const AddMachineModal: React.FC<AddMachineModalProps> = ({
@@ -22,7 +23,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
 
   const filteredModels = useMemo(() => {
     if (!searchQuery) return machineModels;
-    return machineModels.filter(m => 
+    return machineModels.filter(m =>
       m["型号"].toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [machineModels, searchQuery]);

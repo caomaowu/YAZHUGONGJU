@@ -1,23 +1,37 @@
 import React, { useState, useRef } from 'react';
 import { Form, Input, InputNumber, Select, Button, Space, Divider, Row, Col, Upload, message } from 'antd';
 import { UploadOutlined, SaveOutlined } from '@ant-design/icons';
-import type { DieCastingMachine } from '../../types/machine';
+import type { UploadChangeParam, UploadFile } from 'antd/es/upload/interface';
+import type { DieCastingMachine, MachineModelSpecs } from '../../types/machine';
 
 interface MachineEditFormProps {
   initialValues: DieCastingMachine;
   onSave: (values: DieCastingMachine) => void;
   onCancel: () => void;
   locations?: string[];
-  machineModels?: any[];
+  machineModels?: MachineModelSpecs[];
 }
+
+type MachineFormValues = Omit<DieCastingMachine, 'specs' | 'rawSpecs'> & {
+  specs: {
+    clampingForce: number;
+    dieHeightMin: number;
+    dieHeightMax: number;
+    ejectionStroke: number;
+    injectionRate?: number;
+    tieBarSpacingH: number;
+    tieBarSpacingV: number;
+  };
+  rawSpecs?: MachineModelSpecs;
+};
 
 export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues, onSave, onCancel, locations = [], machineModels = [] }) => {
   const [form] = Form.useForm();
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(initialValues.avatar);
-  const baseRawSpecsRef = useRef<any>(initialValues.rawSpecs || {});
+  const baseRawSpecsRef = useRef<MachineModelSpecs | undefined>(initialValues.rawSpecs);
 
   const handleModelSelect = (modelName: string) => {
-    const originalModel = machineModels.find((m: any) => m["型号"] === modelName);
+    const originalModel = machineModels.find((m) => m["型号"] === modelName);
     if (originalModel) {
       // Deep clone to ensure we don't modify the source template
       const selectedModel = JSON.parse(JSON.stringify(originalModel));
@@ -69,12 +83,15 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
     }
   });
 
-  const handleFinish = (values: any) => {
+  const handleFinish = (values: MachineFormValues) => {
     // Merge base raw specs (either initial or from selected model) with form values
-    const mergedRawSpecs = {
-      ...(baseRawSpecsRef.current || {}),
-      ...(values.rawSpecs || {})
-    };
+    const mergedRawSpecs: MachineModelSpecs | undefined =
+      baseRawSpecsRef.current || values.rawSpecs
+        ? ({
+            ...(baseRawSpecsRef.current ?? {}),
+            ...(values.rawSpecs ?? {})
+          } as MachineModelSpecs)
+        : undefined;
 
     // Reconstruct the machine object
     const updatedMachine: DieCastingMachine = {
@@ -93,10 +110,10 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
     onSave(updatedMachine);
   };
 
-  const handleAvatarUpload = (info: any) => {
+  const handleAvatarUpload = (info: UploadChangeParam<UploadFile>) => {
     // Handle manual upload without auto-post
-    const file = info.file;
-    if (file) {
+    const file = info.file.originFileObj;
+    if (file instanceof File) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const url = e.target?.result as string;
@@ -116,7 +133,7 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
         onFinish={handleFinish}
         initialValues={getInitialValues()}
       >
-        <Divider orientation={"left" as const}>基本信息</Divider>
+        <Divider>基本信息</Divider>
         <Form.Item label="快速选择型号模板">
           <Select 
             placeholder="从数据库选择标准型号以自动填充参数" 
@@ -124,7 +141,7 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
             showSearch
             optionFilterProp="children"
           >
-            {machineModels.map((m: any) => (
+            {machineModels.map((m) => (
               <Select.Option key={m["型号"]} value={m["型号"]}>
                 {m["型号"]} ({Math.round(m["锁模力_KN"]/10)}T)
               </Select.Option>
@@ -207,7 +224,7 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
            </Space>
         </Form.Item>
 
-        <Divider orientation={"left" as const}>工艺参数</Divider>
+        <Divider>工艺参数</Divider>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name={['specs', 'clampingForce']} label="锁模力 (kN)" rules={[{ required: true }]}>
@@ -255,7 +272,7 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
           <Input />
         </Form.Item>
 
-        <Divider orientation={"left" as const}>详细规格参数 (可覆写)</Divider>
+        <Divider>详细规格参数 (可覆写)</Divider>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name={['rawSpecs', '模具厚度_mm', '最小']} label="最小模厚 (mm)">

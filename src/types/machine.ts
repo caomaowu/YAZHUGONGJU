@@ -48,5 +48,5 @@ export interface MachineModelSpecs {
   法兰高度_mm: number | string;
   顶出力_KN: number;
   顶出行程_mm: number;
-  [key: string]: any; // Allow extra fields
+  [key: string]: unknown;
 }

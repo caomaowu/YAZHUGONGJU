@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, List, Input, Button, Popconfirm, message, Space } from 'antd';
+import { Modal, List, Input, Button, Popconfirm, message } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 
 interface LocationManagerModalProps {

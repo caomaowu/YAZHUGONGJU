@@ -10,5 +10,11 @@
     "password": "$2b$10$Aq.3ZhonK9xepF4AaWgUzuxHR3E6eOIvkWnUUIsnYLvkYR3kNFV0y",
     "role": "viewer",
     "name": "test123456"
+  },
+  {
+    "username": "123",
+    "password": "$2b$10$NhlG3s.OXBypeh.yZGxajOmg2bVXyvKNZ2UaG0wOOJxZxsx7Rn9Lm",
+    "role": "12",
+    "name": "123"
   }
 ]

@@ -6,8 +6,8 @@ import { MachineDetailDrawer } from '../components/machine/MachineDetailDrawer';
 import { LocationManagerModal } from '../components/machine/LocationManagerModal';
 import { AddMachineModal } from '../components/machine/AddMachineModal';
 import { mockMachines } from '../mock/machines';
-import type { DieCastingMachine } from '../types/machine';
-import { useAuth } from '../core/auth/AuthContext';
+import type { DieCastingMachine, MachineModelSpecs } from '../types/machine';
+import { useAuth } from '../core/auth/useAuth';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -32,7 +32,7 @@ export const MachineDatabasePage: React.FC = () => {
 
   // State for locations and machine models
   const [availableLocations, setAvailableLocations] = useState<string[]>([]);
-  const [machineModels, setMachineModels] = useState<any[]>([]);
+  const [machineModels, setMachineModels] = useState<MachineModelSpecs[]>([]);
 
   // Load locations and models
   useEffect(() => {
