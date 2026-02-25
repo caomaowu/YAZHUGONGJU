@@ -19,6 +19,14 @@ const baseParams: PQ2Params = {
   machineMaxPressureMPa: 80,
   plungerDiameterMm: 60,
   plungerMaxSpeedMps: 5,
+  // 工艺窗口默认值
+  useCustomProcessWindow: false,
+  vGateMaxMps: 60,
+  vGateMinMps: 30,
+  // 液压参数默认值
+  useHydraulicMode: false,
+  hydraulicPressureMPa: 16,
+  hydraulicCylinderDiameterMm: 210,
 }
 
 describe('template codec', () => {

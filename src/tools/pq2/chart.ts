@@ -80,13 +80,34 @@ function buildFeasiblePolygon(result: PQ2ComputeResult): [number, number][] {
 
 export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: string): echarts.EChartsOption {
   const x = result.curve.map((d) => d.q2Lps2)
+  const xMax = Math.max(1, ...x)
   const machine = result.curve.map((d) => [d.q2Lps2, d.pMachineMPa] as [number, number])
   const die = result.curve.map((d) => [d.q2Lps2, d.pDieMPa] as [number, number])
 
   const operating = result.points.operating
   const intersect = result.points.intersect
+  const processWindow = result.points.processWindow
 
-  const xMax = Math.max(1, ...x)
+  // 工艺窗口边界数据
+  const hasProcessWindow = processWindow && processWindow.pMaxMPa > 0 && processWindow.pMinMPa > 0
+  const pMaxLine = hasProcessWindow
+    ? [
+        [0, processWindow!.pMaxMPa],
+        [xMax, processWindow!.pMaxMPa],
+      ] as [number, number][]
+    : []
+  const pMinLine = hasProcessWindow
+    ? [
+        [0, processWindow!.pMinMPa],
+        [xMax, processWindow!.pMinMPa],
+      ] as [number, number][]
+    : []
+  const qMinLine = hasProcessWindow && processWindow!.qMinLps > 0
+    ? [
+        [processWindow!.qMinLps * processWindow!.qMinLps, 0],
+        [processWindow!.qMinLps * processWindow!.qMinLps, Math.max(...result.curve.map((d) => Math.max(d.pMachineMPa, d.pDieMPa)))],
+      ] as [number, number][]
+    : []
 
   // 构建可行区域多边形
   const feasiblePolygon = buildFeasiblePolygon(result)
@@ -124,7 +145,7 @@ export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: stri
       textStyle: { color: 'rgba(33, 23, 53, 0.7)' },
       itemWidth: 10,
       itemHeight: 10,
-      data: ['机台能力', '模具阻力', '工作点'],
+      data: ['机台能力', '模具阻力', '工作点', 'Pmax边界', 'Pmin边界', 'Qmin边界'],
     },
     tooltip: {
       trigger: 'axis',
@@ -199,6 +220,39 @@ export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: stri
               tooltip: { show: false },
               silent: true,
               z: 1,
+            },
+          ]
+        : []),
+      // 工艺窗口边界线
+      ...(hasProcessWindow
+        ? [
+            {
+              name: 'Pmax边界',
+              type: 'line' as const,
+              data: pMaxLine,
+              symbol: 'none',
+              lineStyle: { width: 2, color: 'rgba(239, 68, 68, 0.6)', type: 'dashed' as const },
+              z: 2,
+            },
+            {
+              name: 'Pmin边界',
+              type: 'line' as const,
+              data: pMinLine,
+              symbol: 'none',
+              lineStyle: { width: 2, color: 'rgba(59, 130, 246, 0.6)', type: 'dashed' as const },
+              z: 2,
+            },
+          ]
+        : []),
+      ...(hasProcessWindow && qMinLine.length > 0
+        ? [
+            {
+              name: 'Qmin边界',
+              type: 'line' as const,
+              data: qMinLine,
+              symbol: 'none',
+              lineStyle: { width: 2, color: 'rgba(245, 158, 11, 0.6)', type: 'dashed' as const },
+              z: 2,
             },
           ]
         : []),

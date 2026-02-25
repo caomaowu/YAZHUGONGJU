@@ -40,6 +40,14 @@ const DEFAULT_PARAMS: PQ2Params = {
   machineMaxPressureMPa: 80,
   plungerDiameterMm: 60,
   plungerMaxSpeedMps: 5,
+  // 工艺窗口默认值
+  useCustomProcessWindow: false,
+  vGateMaxMps: 60,
+  vGateMinMps: 30,
+  // 液压参数默认值
+  useHydraulicMode: false,
+  hydraulicPressureMPa: 16, // MPa (约160 kg/cm²)
+  hydraulicCylinderDiameterMm: 210, // mm (约21 cm)
 }
 
 export function PQ2Page() {
@@ -185,6 +193,18 @@ export function PQ2Page() {
                   <Descriptions.Item label="机台最大流量">
                     {computeResult.intermediate.qMaxLps.toFixed(2)} L/s
                   </Descriptions.Item>
+                  <Descriptions.Item label="浇口速度 Vg">
+                    <Typography.Text
+                      type={
+                        computeResult.intermediate.vGateMps >= 30 && computeResult.intermediate.vGateMps <= 60
+                          ? 'success'
+                          : 'warning'
+                      }
+                      strong
+                    >
+                      {computeResult.intermediate.vGateMps.toFixed(1)} m/s
+                    </Typography.Text>
+                  </Descriptions.Item>
                   <Descriptions.Item label="需求压力 P_die">
                     {computeResult.points.operating.pRequiredMPa.toFixed(2)} MPa
                   </Descriptions.Item>
@@ -206,6 +226,22 @@ export function PQ2Page() {
                       </Descriptions.Item>
                       <Descriptions.Item label="交点压力">
                         {computeResult.points.intersect.pMPa.toFixed(2)} MPa
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </>
+                ) : null}
+                {computeResult.points.processWindow ? (
+                  <>
+                    <Divider style={{ margin: '12px 0' }} />
+                    <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
+                      <Descriptions.Item label="工艺窗口 Pmax">
+                        {computeResult.points.processWindow.pMaxMPa.toFixed(2)} MPa
+                      </Descriptions.Item>
+                      <Descriptions.Item label="工艺窗口 Pmin">
+                        {computeResult.points.processWindow.pMinMPa.toFixed(2)} MPa
+                      </Descriptions.Item>
+                      <Descriptions.Item label="工艺窗口 Qmin">
+                        {computeResult.points.processWindow.qMinLps.toFixed(2)} L/s
                       </Descriptions.Item>
                     </Descriptions>
                   </>
@@ -416,22 +452,82 @@ export function PQ2Page() {
                 </div>
 
                 <div className="pill">
-                  <Typography.Text type="secondary">机台能力</Typography.Text>
+                  <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Typography.Text type="secondary">使用液压参数计算</Typography.Text>
+                    <Form.Item name="useHydraulicMode" valuePropName="checked" noStyle>
+                      <Switch />
+                    </Form.Item>
+                  </Space>
                   <div style={{ height: 10 }} />
 
-                  <Form.Item
-                    label="最大压力（MPa）"
-                    name="machineMaxPressureMPa"
-                    rules={[{ required: true, type: 'number', min: 1 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={0} step={1} />
-                  </Form.Item>
-                  <Form.Item
-                    label="冲头直径（mm）"
-                    name="plungerDiameterMm"
-                    rules={[{ required: true, type: 'number', min: 1 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={0} step={1} />
+                  <Form.Item noStyle shouldUpdate={(p, n) => p.useHydraulicMode !== n.useHydraulicMode}>
+                    {({ getFieldValue }) => {
+                      const useHydraulic = getFieldValue('useHydraulicMode') as boolean
+                      return useHydraulic ? (
+                        <>
+                          <Form.Item
+                            label="液压压力（MPa）"
+                            name="hydraulicPressureMPa"
+                            rules={[{ required: true, type: 'number', min: 1 }]}
+                          >
+                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
+                          </Form.Item>
+                          <Form.Item
+                            label="压射缸直径（mm）"
+                            name="hydraulicCylinderDiameterMm"
+                            rules={[{ required: true, type: 'number', min: 1 }]}
+                          >
+                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
+                          </Form.Item>
+                          <Form.Item
+                            label="冲头直径（mm）"
+                            name="plungerDiameterMm"
+                            rules={[{ required: true, type: 'number', min: 1 }]}
+                          >
+                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
+                          </Form.Item>
+                          <Form.Item noStyle shouldUpdate>
+                            {({ getFieldValue: gv }) => {
+                              const phyd = gv('hydraulicPressureMPa') as number
+                              const dhyd = gv('hydraulicCylinderDiameterMm') as number
+                              const dpt = gv('plungerDiameterMm') as number
+                              let calculatedPressure = 0
+                              if (dpt > 0) {
+                                const pmKgCm2 = (phyd * 10) * Math.pow((dhyd / 10) / (dpt / 10), 2)
+                                calculatedPressure = pmKgCm2 * 0.0980665
+                              }
+                              return (
+                                <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(139, 92, 246, 0.08)', borderRadius: 8 }}>
+                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                    计算所得机台压力: {' '}
+                                    <Typography.Text strong style={{ color: token.colorPrimary }}>
+                                      {calculatedPressure.toFixed(2)} MPa
+                                    </Typography.Text>
+                                  </Typography.Text>
+                                </div>
+                              )
+                            }}
+                          </Form.Item>
+                        </>
+                      ) : (
+                        <>
+                          <Form.Item
+                            label="最大压力（MPa）"
+                            name="machineMaxPressureMPa"
+                            rules={[{ required: true, type: 'number', min: 1 }]}
+                          >
+                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
+                          </Form.Item>
+                          <Form.Item
+                            label="冲头直径（mm）"
+                            name="plungerDiameterMm"
+                            rules={[{ required: true, type: 'number', min: 1 }]}
+                          >
+                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
+                          </Form.Item>
+                        </>
+                      )
+                    }}
                   </Form.Item>
                   <Form.Item
                     label="冲头最大速度（m/s）"
@@ -440,6 +536,38 @@ export function PQ2Page() {
                   >
                     <InputNumber style={{ width: '100%' }} min={0} step={0.1} />
                   </Form.Item>
+                </div>
+
+                <div className="pill">
+                  <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Typography.Text type="secondary">自定义工艺窗口</Typography.Text>
+                    <Form.Item name="useCustomProcessWindow" valuePropName="checked" noStyle>
+                      <Switch />
+                    </Form.Item>
+                  </Space>
+                  <div style={{ height: 10 }} />
+
+                  <Form.Item
+                    label="最大浇口速度（m/s）"
+                    name="vGateMaxMps"
+                    rules={[{ required: true, type: 'number', min: 10 }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={10} max={200} step={5} />
+                  </Form.Item>
+                  <Form.Item
+                    label="最小浇口速度（m/s）"
+                    name="vGateMinMps"
+                    rules={[{ required: true, type: 'number', min: 5 }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={5} max={100} step={5} />
+                  </Form.Item>
+                  {!params?.useCustomProcessWindow && (
+                    <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(139, 92, 246, 0.08)', borderRadius: 8 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        使用推荐值: Vmax=60m/s, Vmin=30m/s
+                      </Typography.Text>
+                    </div>
+                  )}
                 </div>
 
                 <Button

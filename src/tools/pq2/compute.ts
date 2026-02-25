@@ -45,6 +45,18 @@ export function applyParamLinkage(raw: PQ2Params): PQ2Params {
     next.castingMassKg = Number.isFinite(massKg) ? massKg : 0
   }
 
+  // 液压模式：从液压参数计算机台最大压力
+  if (raw.useHydraulicMode) {
+    const phyd = raw.hydraulicPressureMPa
+    const dhyd = raw.hydraulicCylinderDiameterMm / 10 // 转换为cm
+    const dpt = raw.plungerDiameterMm / 10 // 转换为cm
+    if (dpt > 0) {
+      // Pm = Phyd * (dhyd/dpt)^2，结果单位转换为MPa (1 kg/cm² ≈ 0.098 MPa)
+      const pmKgCm2 = phyd * 10 * Math.pow(dhyd / dpt, 2) // 先按kg/cm²计算
+      next.machineMaxPressureMPa = pmKgCm2 * 0.0980665 // 转换为MPa
+    }
+  }
+
   return next
 }
 
@@ -177,6 +189,22 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
   const inputMassKg =
     params.inputBasis === 'mass' ? params.castingMassKg : params.castingVolumeCm3 * (params.densityKgM3 / 1e6)
 
+  // 计算浇口速度 Vg = Q / (Cd * Ag)
+  const vGateMps = gateAreaM2 > 0 && cd > 0 ? qRequiredM3s / (cd * gateAreaM2) : 0
+
+  // 计算工艺窗口边界
+  // Pmax/Pmin = ρ * (Vmax/Vmin * 100)² / (2 * Cd² * g * 1000) [CGS公式转换]
+  // SI单位: P = ρ * V² / (2 * Cd²)
+  const vMaxMps = params.vGateMaxMps
+  const vMinMps = params.vGateMinMps
+  const pWindowMaxPa = cd > 0 ? (normalized.densityKgM3 * vMaxMps * vMaxMps) / (2 * cd * cd) : 0
+  const pWindowMinPa = cd > 0 ? (normalized.densityKgM3 * vMinMps * vMinMps) / (2 * cd * cd) : 0
+  const pWindowMaxMPa = paToMPa(pWindowMaxPa)
+  const pWindowMinMPa = paToMPa(pWindowMinPa)
+
+  // Qmin = Vcav / t (基于填充时间的最小流量)
+  const qWindowMinLps = qRequiredLps // 当前使用需求流量作为Qmin
+
   const intermediate = {
     gateAreaMm2: params.gateAreaMm2,
     gateAreaM2,
@@ -191,6 +219,12 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
     xMaxLps2,
     dieSlopeMPaPerM6s2: paToMPa(dieSlopePaPerM6s2),
     dieSlopeMPaPerLps2: paToMPa(dieSlopePaPerM6s2) / 1e6,
+    // 浇口速度
+    vGateMps,
+    // 工艺窗口计算值
+    pWindowMaxMPa,
+    pWindowMinMPa,
+    qWindowMinLps,
   }
 
   const points = {
@@ -203,6 +237,12 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
     },
     intersect,
     feasible,
+    // 工艺窗口边界点
+    processWindow: {
+      pMaxMPa: pWindowMaxMPa,
+      pMinMPa: pWindowMinMPa,
+      qMinLps: qWindowMinLps,
+    },
   }
 
   if (params.useCustomGateArea) warnings.push('浇口面积使用自定义值，注意与几何尺寸一致性')
@@ -234,6 +274,12 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
     machineMaxPressureMPa: clampNumber(params.machineMaxPressureMPa, 0, 400),
     plungerDiameterMm: clampNumber(params.plungerDiameterMm, 1, 500),
     plungerMaxSpeedMps: clampNumber(params.plungerMaxSpeedMps, 0, 20),
+    // 工艺窗口参数
+    vGateMaxMps: clampNumber(params.vGateMaxMps, 10, 200),
+    vGateMinMps: clampNumber(params.vGateMinMps, 5, 100),
+    // 液压参数
+    hydraulicPressureMPa: clampNumber(params.hydraulicPressureMPa, 1, 500),
+    hydraulicCylinderDiameterMm: clampNumber(params.hydraulicCylinderDiameterMm, 1, 1000),
   }
 
   return {

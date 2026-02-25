@@ -18,6 +18,14 @@ const base: PQ2Params = {
   machineMaxPressureMPa: 80,
   plungerDiameterMm: 60,
   plungerMaxSpeedMps: 5,
+  // 工艺窗口默认值
+  useCustomProcessWindow: false,
+  vGateMaxMps: 60,
+  vGateMinMps: 30,
+  // 液压参数默认值
+  useHydraulicMode: false,
+  hydraulicPressureMPa: 16,
+  hydraulicCylinderDiameterMm: 210,
 }
 
 describe('pq2 compute', () => {
@@ -37,6 +45,40 @@ describe('pq2 compute', () => {
     expect(result.points.operating.qLps).toBeGreaterThan(0)
     expect(result.points.operating.pRequiredMPa).toBeGreaterThanOrEqual(0)
     expect(result.intermediate.xMaxLps2).toBeGreaterThan(result.intermediate.xRequiredLps2 * 0.5)
+  })
+
+  it('calculates gate velocity correctly', () => {
+    const result = computePQ2({ ...base, useCustomGateArea: false, gateWidthMm: 40, gateThicknessMm: 2 })
+    expect(result.errors).toEqual([])
+    expect(result.intermediate.vGateMps).toBeGreaterThan(0)
+    // Vg = Q / (Cd * Ag), Ag = 80 mm² = 8e-5 m²
+    expect(result.intermediate.vGateMps).toBeCloseTo(
+      result.intermediate.qRequiredM3s / (0.62 * 8e-5),
+      1
+    )
+  })
+
+  it('calculates process window boundaries', () => {
+    const result = computePQ2({ ...base, vGateMaxMps: 60, vGateMinMps: 30 })
+    expect(result.errors).toEqual([])
+    expect(result.points.processWindow).toBeDefined()
+    expect(result.points.processWindow!.pMaxMPa).toBeGreaterThan(result.points.processWindow!.pMinMPa)
+    expect(result.points.processWindow!.qMinLps).toBeGreaterThan(0)
+  })
+
+  it('calculates machine pressure from hydraulic parameters', () => {
+    const result = applyParamLinkage({
+      ...base,
+      useHydraulicMode: true,
+      hydraulicPressureMPa: 16,
+      hydraulicCylinderDiameterMm: 210,
+      plungerDiameterMm: 130,
+    })
+    // Pm = Phyd * (dhyd/dpt)^2
+    // 16 MPa = 160 kg/cm², dhyd = 21 cm, dpt = 13 cm
+    // Pm = 160 * (21/13)^2 ≈ 417.5 kg/cm² ≈ 40.9 MPa
+    expect(result.machineMaxPressureMPa).toBeGreaterThan(0)
+    expect(result.machineMaxPressureMPa).toBeCloseTo(40.9, 0)
   })
 })
 
