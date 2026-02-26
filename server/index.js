@@ -7,6 +7,21 @@ import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
+import OpenAI from 'openai';
+import { createRequire } from 'module';
+import fetch from 'node-fetch'; // Need node-fetch for file upload if environment is Node < 18 or specific needs
+
+const require = createRequire(import.meta.url);
+const BailianSDK = require('@alicloud/bailian20231229');
+// Handle CJS export structure
+const Client = BailianSDK.default || BailianSDK;
+const { ApplyFileUploadLeaseRequest, AddFileRequest, ListFileRequest, CompletionRequest, RetrieveRequest } = BailianSDK;
+
+const OpenApiClient = require('@alicloud/openapi-client');
+const Config = OpenApiClient.Config || OpenApiClient.default?.Config;
+
+const TeaUtil = require('@alicloud/tea-util');
+const RuntimeOptions = TeaUtil.RuntimeOptions || TeaUtil.default?.RuntimeOptions;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +40,8 @@ const LOCATIONS_FILE = path.join(__dirname, 'locations.json');
 const MODELS_FILE = path.join(__dirname, 'machine_models.json');
 const USERS_FILE = path.join(__dirname, 'users.json');
 const ROLES_FILE = path.join(__dirname, 'roles.json');
+const CHATS_FILE = path.join(__dirname, 'chats.json');
+const BAILIAN_CONFIG_FILE = path.join(__dirname, 'bailian_config.json');
 
 function nowIso() {
   return new Date().toISOString();
@@ -98,6 +115,10 @@ if (!fs.existsSync(ROLES_FILE)) {
     }
   ];
   fs.writeJsonSync(ROLES_FILE, defaultRoles, { spaces: 2 });
+}
+// Ensure chats file exists
+if (!fs.existsSync(CHATS_FILE)) {
+  fs.writeJsonSync(CHATS_FILE, [], { spaces: 2 });
 }
 
 try {
@@ -277,6 +298,108 @@ app.get('/api/users', authenticateToken, requireRole(['admin']), async (req, res
   }
 });
 
+// AI Proxy
+app.post('/api/ai/proxy', async (req, res) => {
+  try {
+    const { apiKey, baseUrl, model, messages, temperature } = req.body;
+
+    if (!apiKey || !baseUrl || !messages) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    const client = new OpenAI({
+      apiKey,
+      baseURL: baseUrl,
+    });
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const stream = await client.chat.completions.create({
+      model,
+      messages,
+      temperature: temperature || 0.7,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      }
+    }
+    res.write('data: [DONE]\n\n');
+    res.end();
+
+  } catch (error) {
+    console.error('AI Proxy Error:', error);
+    // If headers already sent (streaming started), we can't send JSON error
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    } else {
+      res.status(500).json({ error: error.message || 'AI Proxy Error' });
+    }
+  }
+});
+
+// Chat History Persistence
+app.get('/api/ai/chats', async (req, res) => {
+  try {
+    const chats = await readJsonWithDefault(CHATS_FILE, []);
+    res.json(chats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch chats' });
+  }
+});
+
+app.post('/api/ai/chats', async (req, res) => {
+  try {
+    const session = req.body;
+    if (!session || !session.id) {
+      return res.status(400).json({ error: 'Invalid session data' });
+    }
+
+    const chats = await readJsonWithDefault(CHATS_FILE, []);
+    const index = chats.findIndex(c => c.id === session.id);
+    
+    if (index !== -1) {
+      chats[index] = session;
+    } else {
+      chats.unshift(session);
+    }
+
+    await fs.writeJson(CHATS_FILE, chats, { spaces: 2 });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save chat' });
+  }
+});
+
+app.delete('/api/ai/chats/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const chats = await readJsonWithDefault(CHATS_FILE, []);
+    const newChats = chats.filter(c => c.id !== id);
+    
+    await fs.writeJson(CHATS_FILE, newChats, { spaces: 2 });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete chat' });
+  }
+});
+
+// Clear all chats
+app.delete('/api/ai/chats', async (req, res) => {
+  try {
+    await fs.writeJson(CHATS_FILE, [], { spaces: 2 });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to clear chats' });
+  }
+});
+
 app.post('/api/users', authenticateToken, requireRole(['admin']), async (req, res) => {
   try {
     const { username, password, role, name } = req.body;
@@ -407,6 +530,459 @@ app.get('/api/machine-models', async (req, res) => {
   } catch (error) {
     console.error('Error reading machine models:', error);
     res.status(500).json({ error: 'Failed to read machine models data' });
+  }
+});
+
+// --- Aliyun Bailian Integration ---
+
+const getBailianConfig = async () => {
+  return await readJsonWithDefault(BAILIAN_CONFIG_FILE, {
+    accessKeyId: '',
+    accessKeySecret: '',
+    workspaceId: '',
+    appId: '', // Default App ID
+    apiKey: '', // Default API Key
+    knowledgeBaseId: ''
+  });
+};
+
+const maskSensitive = (str, visibleChars = 8) => {
+    if (!str || str.length <= visibleChars) return str;
+    return str.slice(0, visibleChars) + '******';
+};
+
+const isMasked = (str) => {
+    return str && str.includes('******');
+};
+
+const createBailianClient = async () => {
+  const config = await getBailianConfig();
+  if (!config.accessKeyId || !config.accessKeySecret) {
+    throw new Error('Missing Bailian credentials');
+  }
+  const clientConfig = new Config({
+    accessKeyId: config.accessKeyId,
+    accessKeySecret: config.accessKeySecret,
+    endpoint: 'bailian.cn-beijing.aliyuncs.com'
+  });
+  return new Client(clientConfig);
+};
+
+// Get Config
+app.get('/api/bailian/config', async (req, res) => {
+  try {
+    const config = await getBailianConfig();
+    // Hide secret and mask IDs
+    const safeConfig = { 
+        ...config, 
+        accessKeyId: maskSensitive(config.accessKeyId),
+        workspaceId: maskSensitive(config.workspaceId),
+        appId: maskSensitive(config.appId),
+        knowledgeBaseId: maskSensitive(config.knowledgeBaseId),
+        accessKeySecret: config.accessKeySecret ? '******' : '',
+        apiKey: config.apiKey ? '******' : '' 
+    };
+    res.json(safeConfig);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get config' });
+  }
+});
+
+// Update Config
+app.post('/api/bailian/config', async (req, res) => {
+  try {
+    const { accessKeyId, accessKeySecret, workspaceId, appId, apiKey, knowledgeBaseId } = req.body;
+    const currentConfig = await getBailianConfig();
+    
+    const newConfig = { ...currentConfig };
+
+    // Update fields only if they are not masked
+    if (accessKeyId && !isMasked(accessKeyId)) newConfig.accessKeyId = accessKeyId;
+    if (workspaceId && !isMasked(workspaceId)) newConfig.workspaceId = workspaceId;
+    if (appId && !isMasked(appId)) newConfig.appId = appId;
+    if (knowledgeBaseId && !isMasked(knowledgeBaseId)) newConfig.knowledgeBaseId = knowledgeBaseId;
+    
+    // Only update secret if provided and not masked
+    if (accessKeySecret && accessKeySecret !== '******') {
+      newConfig.accessKeySecret = accessKeySecret;
+    }
+    
+    // Only update apiKey if provided and not masked
+    if (apiKey && apiKey !== '******') {
+      newConfig.apiKey = apiKey;
+    }
+
+    await fs.writeJson(BAILIAN_CONFIG_FILE, newConfig, { spaces: 2 });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save config' });
+  }
+});
+
+// List Files
+app.get('/api/bailian/files', async (req, res) => {
+    try {
+        const config = await getBailianConfig();
+        if (!config.workspaceId) {
+             return res.json([]); // Return empty if no workspace configured
+        }
+        
+        const client = await createBailianClient();
+        // const { ListFileRequest } = await import('@alicloud/bailian20231229');
+        
+        const request = new ListFileRequest({
+            categoryId: 'default',
+            limit: 20,
+            offset: 0
+        });
+        
+        const response = await client.listFile(config.workspaceId, request);
+        
+        if (!response.body.success) {
+            throw new Error(response.body.message || 'Failed to list files');
+        }
+        
+        res.json(response.body.data.fileList || []);
+    } catch (error) {
+        console.error('Bailian List Files Error:', error);
+        res.status(500).json({ error: 'Failed to list files' });
+    }
+});
+
+// Upload Document (Step 1: Get Lease & Upload & Add)
+app.post('/api/bailian/documents/upload', async (req, res) => {
+  try {
+    const { fileName, fileContentBase64, categoryId } = req.body; // fileContentBase64: base64 string
+    if (!fileName || !fileContentBase64) {
+      return res.status(400).json({ error: 'Missing file data' });
+    }
+
+    const config = await getBailianConfig();
+    if (!config.workspaceId) return res.status(400).json({ error: 'Missing Workspace ID' });
+
+    const client = await createBailianClient();
+    const buffer = Buffer.from(fileContentBase64, 'base64');
+    
+    // 1. Apply Lease
+    // MD5 calc
+    const crypto = await import('crypto');
+    const md5 = crypto.createHash('md5').update(buffer).digest('hex');
+    
+    const leaseRequest = new ApplyFileUploadLeaseRequest({
+      fileName,
+      md5,
+      sizeInBytes: buffer.length.toString(),
+    });
+
+    const leaseResponse = await client.applyFileUploadLease(categoryId || 'default', config.workspaceId, leaseRequest);
+    const leaseData = leaseResponse.body;
+    
+    if (!leaseData.param) {
+      throw new Error('Failed to get upload parameters');
+    }
+
+    // 2. Upload to OSS
+    // Headers need to be constructed from leaseData.param.headers
+    const headers = {};
+    // headers is object
+    // leaseData.param.headers is map? or object? SDK returns object usually.
+    // Let's assume object.
+    
+    // The SDK documentation or example implies standard HTTP PUT usually.
+    // Wait, the example link says: use requests.put(url, data=content, headers=headers)
+    
+    const uploadUrl = leaseData.param.url;
+    const uploadHeaders = leaseData.param.headers; // This is map<string, any>
+
+    // node-fetch
+    const fetchHeaders = {};
+    if (uploadHeaders) {
+        // Need to iterate if it's not a plain object
+        Object.keys(uploadHeaders).forEach(key => {
+            fetchHeaders[key] = uploadHeaders[key];
+        });
+    }
+    fetchHeaders['Content-Type'] = ''; // Ensure content type is handled if needed, usually determined by OSS
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: fetchHeaders,
+      body: buffer
+    });
+
+    if (!uploadRes.ok) {
+       const text = await uploadRes.text();
+       throw new Error(`OSS Upload failed: ${uploadRes.status} ${text}`);
+    }
+
+    // 3. Add File to Knowledge Base
+    // Note: Use 'AddFile' but we need to create Index first? 
+    // Wait, Bailian 'AddFile' adds to Data Center. 
+    // To make it searchable, we need to add it to an Index (Knowledge Base).
+    // The previous implementation 'AddFile' only adds to Data Center category.
+    // User needs to manually add to knowledge base in console or we use CreateIndex/SubmitIndexJob.
+    // But 'Retrieve' API works on Knowledge Base Index ID, not App ID.
+    
+    // Let's keep it simple: Just upload for now. 
+    // If we want RAG, we need Index ID.
+    
+    const addFileRequest = new AddFileRequest({
+      leaseId: leaseData.data.fileUploadLeaseId,
+      parser: 'DAS', // Default parsing
+      categoryId: categoryId || 'default',
+    });
+
+    const addFileResponse = await client.addFile(config.workspaceId, addFileRequest);
+
+    res.json({ 
+      success: true, 
+      fileId: addFileResponse.body.data.fileId,
+      message: 'File uploaded. Please add it to your Knowledge Base Index in Bailian Console.'
+    });
+
+  } catch (error) {
+    console.error('Bailian Upload Error:', error);
+    res.status(500).json({ error: error.message || 'Upload failed' });
+  }
+});
+
+// Chat with Bailian App
+app.post('/api/bailian/chat', async (req, res) => {
+  try {
+    const { messages, appId } = req.body; // messages: [{role, content}]
+    const config = await getBailianConfig();
+    const targetAppId = appId || config.appId;
+
+    if (!targetAppId) {
+      return res.status(400).json({ error: 'App ID is not configured' });
+    }
+    
+    // Use OpenAI compatible client for Bailian App (DashScope)
+    // If user wants to use 3rd party model, we need to retrieve knowledge first, then call 3rd party.
+    // BUT Bailian App API encapsulates RAG.
+    
+    // If user wants custom model + Bailian Knowledge Base:
+    // 1. Retrieve knowledge from Bailian (Need Index ID)
+    // 2. Construct prompt with knowledge
+    // 3. Call 3rd party model (OpenAI/DeepSeek)
+    
+    // However, user provided App ID. Bailian App IS the model + knowledge.
+    // If user says "I don't want Bailian Model", they mean they want to use their OWN model (e.g. DeepSeek) but with Bailian's Knowledge Base.
+    
+    // Let's support a "Hybrid RAG" mode.
+    // We need "Index ID" (Knowledge Base ID) instead of "App ID" for retrieval.
+    // But currently UI only asks for App ID.
+    // Bailian Retrieve API needs IndexId.
+    
+    // Hack: If appId starts with 'idx-', treat it as Index ID for Retrieval?
+    // Or add a new field in config?
+    // Let's assume the user configures the Knowledge Base ID in 'appId' field if they want to use external model?
+    // No, that's confusing.
+    
+    // Better: Add 'knowledgeBaseId' to config.
+    // But for now, let's assume if user is using "Knowledge Base Mode" in UI, and we have a flag 'useExternalModel' (passed from client?), we do retrieval.
+    
+    // Client sends: { messages, useExternalModel: true, externalModelConfig: { ... } }
+    // But currently client sends { messages, appId }.
+    
+    // Let's just use the DashScope API if it's a Bailian App ID.
+    // If user wants to use own model, they should not use this route? 
+    // OR, we modify this route to support retrieval.
+    
+    // Let's try to interpret the request.
+    // If the user wants to use their own model, they are likely calling /api/ai/proxy but with RAG enabled?
+    // The frontend calls /api/bailian/chat when RAG is enabled.
+    
+    // Let's change /api/bailian/chat to support "Retrieve Only" or "Retrieve + External Generation".
+    // But we need Knowledge Base ID.
+    
+    // Let's look at Bailian Retrieve API.
+    // It requires IndexId.
+    
+    // If user insists on using their own model, we must use Retrieve API.
+    // We need to ask user for Knowledge Base ID (Index ID).
+    // App ID is for Bailian App (which includes Model).
+    
+    // Let's add knowledgeBaseId to config.
+    // For now, let's check if we can retrieve using App ID? No.
+    
+    // Let's assume for this turn, we stick to Bailian App (which uses Qwen).
+    // If user wants "Third Party Model", we need to implement RAG manually:
+    // 1. Search Knowledge Base
+    // 2. Call Third Party
+    
+    // User said: "I cannot use my own configured third party model? Must I use Aliyun's?"
+    // Answer: Yes, currently this route uses Aliyun's App.
+    // To support user's model, we need to change architecture.
+    
+    // Plan:
+    // 1. Add `knowledgeBaseId` to Bailian Config.
+    // 2. In /api/bailian/chat:
+    //    If `knowledgeBaseId` is present:
+    //       a. Call Bailian Retrieve API to get chunks.
+    //       b. Construct prompt: "Context: \n ... \n Question: ..."
+    //       c. Call User's Configured Provider (DeepSeek/OpenAI) via the same logic as /api/ai/proxy.
+    //    Else:
+    //       Call Bailian App (existing logic).
+
+    const { knowledgeBaseId, provider } = req.body; // provider config passed from frontend?
+    // We need to read provider config from request or utilize existing settings.
+    // Frontend `useAIChat` has settings. It should pass the provider config if we want to use it.
+    
+    // Let's check if we can get knowledgeBaseId from config.
+    const kbId = config.knowledgeBaseId;
+    
+    if (kbId && req.body.useExternalModel) {
+        // --- Hybrid RAG Mode ---
+        
+        // 1. Retrieve
+        // const { RetrieveRequest } = await import('@alicloud/bailian20231229');
+        const client = await createBailianClient();
+        
+        const query = messages[messages.length - 1].content;
+        
+        const retrieveReq = new RetrieveRequest({
+            indexId: kbId,
+            query: query,
+            limit: 5, // Top 5 chunks
+        });
+        
+        let context = "";
+        try {
+            console.log(`[RAG] Retrieving from Index ID: ${kbId} for query: ${query}`);
+            const retrieveResp = await client.retrieve(config.workspaceId, retrieveReq);
+            console.log('[RAG] Retrieve Response:', JSON.stringify(retrieveResp.body, null, 2));
+            
+            if (retrieveResp.body.success && retrieveResp.body.data && retrieveResp.body.data.nodes) {
+                context = retrieveResp.body.data.nodes.map(n => {
+                    let text = n.text;
+                    // Check if there are images in the node metadata or content?
+                    // Bailian API might return images differently. 
+                    // Usually images are not directly in 'text' unless it's a markdown link.
+                    // But if the parser extracted images, they might be in a separate field or embedded.
+                    // Let's check if 'n' has image info. 
+                    // If not available in this SDK response structure, we can only rely on text.
+                    // However, if the text contains image references like [image](url), they will be passed.
+                    
+                    // If the user wants images, the document must be parsed with image support.
+                    // And the retrieval result must contain image URLs.
+                    
+                    // Let's log the node structure to debug image availability
+                    // console.log('Node:', JSON.stringify(n, null, 2));
+                    
+                    return text;
+                }).join("\n\n");
+                
+                // Add instructions to include images if they exist in context
+                if (context.includes('http') && (context.includes('.png') || context.includes('.jpg') || context.includes('.jpeg'))) {
+                     context += "\n\n[System Note: The context above contains image URLs. Please display them in your response using Markdown image syntax: ![description](url)]";
+                }
+                
+                console.log(`[RAG] Retrieved ${retrieveResp.body.data.nodes.length} chunks. Context length: ${context.length}`);
+            } else {
+                console.warn('[RAG] No nodes found or request failed');
+            }
+        } catch (e) {
+            console.error("Retrieval failed", e);
+            if (e.code === 'InvalidAccessKeyId.NotFound') {
+                 console.error("CRITICAL: AccessKey ID is invalid. It should start with 'LTAI'. User provided:", config.accessKeyId.slice(0, 4) + '...');
+                 context = `[System Error: Knowledge Retrieval Failed. Cause: Invalid AccessKey ID. Please check your Bailian Config. AccessKey ID should start with 'LTAI'.]\n\n`;
+            } else if (e.code === 'Index.NoWorkspacePermissions' || e.statusCode === 403) {
+                 console.error("CRITICAL: Permission Denied. The RAM user does not have permission for this workspace.");
+                 context = `[System Error: Knowledge Retrieval Failed. Cause: Permission Denied (403). The RAM user (AccessKey) is not a member of the Workspace or lacks permission. Please go to Bailian Console -> Workspace Management and add this user as a member.]\n\n`;
+            } else {
+                 context = `[System Error: Knowledge Retrieval Failed. Cause: ${e.message || 'Unknown Error'}]\n\n`;
+            }
+        }
+        
+        // 2. Construct System Prompt
+        const systemPrompt = `You are a helpful assistant. Use the following context to answer the user's question.
+        
+Context:
+${context}
+
+If the answer is not in the context, say so, but try to be helpful.`;
+
+        // 3. Call External Model (Reuse Proxy Logic)
+        const providerConfig = req.body.providerConfig; // { apiKey, baseUrl, model, ... }
+        if (!providerConfig) {
+             throw new Error("External provider config missing");
+        }
+        
+        const openai = new OpenAI({
+            apiKey: providerConfig.apiKey,
+            baseURL: providerConfig.baseUrl,
+        });
+        
+        const newMessages = [
+            { role: 'system', content: systemPrompt },
+            ...messages
+        ];
+        
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        const stream = await openai.chat.completions.create({
+            model: providerConfig.model,
+            messages: newMessages,
+            temperature: providerConfig.temperature || 0.7,
+            stream: true,
+        });
+
+        for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+                res.write(`data: ${JSON.stringify({ content })}\n\n`);
+            }
+        }
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+    }
+
+    // --- Original Bailian App Mode ---
+    
+    // Check if API Key is configured
+    if (!config.apiKey) {
+         return res.status(400).json({ error: 'API Key is not configured. Please set API Key in Bailian settings.' });
+    }
+
+    // Use OpenAI compatible client for Bailian App (DashScope)
+    // Endpoint: https://dashscope.aliyuncs.com/compatible-mode/v1
+    
+    const client = new OpenAI({
+      apiKey: config.apiKey,
+      baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    });
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const stream = await client.chat.completions.create({
+      model: targetAppId,
+      messages: messages,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      }
+    }
+    res.write('data: [DONE]\n\n');
+    res.end();
+
+  } catch (error) {
+    console.error('Bailian Chat Error:', error);
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 

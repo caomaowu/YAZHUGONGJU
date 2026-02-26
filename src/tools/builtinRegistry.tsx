@@ -1,4 +1,4 @@
-import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
@@ -7,6 +7,7 @@ import { SettingsPage } from '../pages/SettingsPage'
 import { TemplatesPage } from '../pages/TemplatesPage'
 import { MachineDatabasePage } from '../pages/MachineDatabasePage'
 import { UserManagementPage } from '../pages/UserManagementPage'
+import { AIKnowledgeBasePage } from '../pages/AIKnowledgeBase/AIKnowledgeBasePage'
 
 function createBuiltinTools(): ToolDefinition[] {
   return [
@@ -39,6 +40,16 @@ function createBuiltinTools(): ToolDefinition[] {
       order: 20,
       element: <PQ2Page />,
       allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
+    },
+    {
+      id: 'ai-knowledge',
+      title: 'AI 知识库',
+      navLabel: 'AI 知识库',
+      route: '/ai-knowledge',
+      icon: <RobotOutlined />,
+      order: 25,
+      element: <AIKnowledgeBasePage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
     },
     {
       id: 'templates',

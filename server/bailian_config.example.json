@@ -1,0 +1,7 @@
+{
+  "accessKeyId": "YOUR_ACCESS_KEY_ID",
+  "accessKeySecret": "YOUR_ACCESS_KEY_SECRET",
+  "workspaceId": "YOUR_WORKSPACE_ID",
+  "appId": "YOUR_APP_ID",
+  "knowledgeBaseId": "YOUR_KNOWLEDGE_BASE_ID"
+}

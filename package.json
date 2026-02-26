@@ -19,6 +19,9 @@
     "start": "node server/index.js"
   },
   "dependencies": {
+    "@alicloud/bailian20231229": "^2.8.1",
+    "@alicloud/openapi-client": "^0.4.15",
+    "@alicloud/tea-util": "^1.4.11",
     "@ant-design/icons": "^6.1.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
@@ -26,8 +29,16 @@
     "bcryptjs": "^3.0.3",
     "echarts": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
+    "katex": "^0.16.33",
+    "node-fetch": "^3.3.2",
+    "openai": "^6.25.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -35,6 +46,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^5.1.1",
     "body-parser": "^2.2.2",
     "concurrently": "^9.2.1",
