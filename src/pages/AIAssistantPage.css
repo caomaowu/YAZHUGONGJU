@@ -1,8 +1,10 @@
 .aiShell {
   height: 100%;
+  width: 100%; /* Ensure full width */
   display: flex;
   gap: 14px;
   min-height: 0;
+  overflow: hidden; /* Ensure no outer scroll */
 }
 
 .aiSidebar {
@@ -20,16 +22,25 @@
   border: 1px solid var(--panel-border);
   background: var(--card-bg);
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Ensure card fills sidebar */
+  overflow: hidden; /* Contain inner scroll */
 }
 
 .aiSidebarCard .ant-card-body {
   padding: 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .aiChatList {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-y: auto; /* Explicit vertical scroll */
   padding-right: 4px;
 }
 
@@ -40,6 +51,8 @@
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  overflow: hidden; /* Ensure main area doesn't grow beyond container */
+  position: relative; /* Context for absolute positioning */
 }
 
 .aiTopbar {
@@ -52,13 +65,15 @@
   border: 1px solid var(--panel-border);
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(236, 72, 153, 0.08) 55%, rgba(34, 197, 94, 0.05) 130%), var(--card-bg);
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0; /* Prevent compression */
 }
 
 .aiMessages {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  padding: 6px 6px 2px 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 6px 180px 6px; /* Huge padding bottom for input area */
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -100,14 +115,28 @@
 }
 
 .aiComposer {
-  border-radius: 16px;
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(860px, 95%);
+  z-index: 100;
+
+  border-radius: 20px;
   border: 1px solid var(--panel-border);
-  background: var(--card-bg);
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.04);
-  padding: 12px;
+  background: rgba(255, 255, 255, 0.85); /* Slightly transparent */
+  backdrop-filter: blur(12px);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(0, 0, 0, 0.02);
+  
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .aiComposer {
+  background: rgba(30, 30, 40, 0.85);
 }
 
 .aiComposerActions {

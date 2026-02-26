@@ -98,7 +98,9 @@ export function AIAssistantPage() {
   const abortRef = useRef<AbortController | null>(null)
 
   const messagesWrapRef = useRef<HTMLDivElement | null>(null)
-  const [isAtBottom, setIsAtBottom] = useState(true)
+  const isAtBottomRef = useRef(true)
+
+  const [hasInitialized, setHasInitialized] = useState(false)
 
   const groupedChats = useMemo(() => {
     const groups: Record<string, ChatSummary[]> = { 今天: [], 昨天: [], 更早: [] }
@@ -137,7 +139,19 @@ export function AIAssistantPage() {
       if (!res.ok) throw new Error('Failed')
       const data = (await res.json()) as ChatSummary[]
       setChats(data)
-      if (!activeChatId && data.length > 0) setActiveChatId(data[0].id)
+      setHasInitialized(true)
+      // 如果没有选中的会话
+      if (!activeChatId) {
+        if (data.length > 0) {
+          // 有历史会话，选中最新的
+          setActiveChatId(data[0].id)
+        } else {
+          // 没有会话，创建一个新的（只在初始化完成后执行一次，避免重复创建）
+          // 但要注意这里不要直接调用 createChat()，因为 createChat 也会调用 fetchChats
+          // 可以通过 useEffect 监听 hasInitialized 来处理，或者在这里手动触发创建逻辑
+          // 为了避免副作用链，我们在这里不做自动创建，而是让 useEffect 处理
+        }
+      }
     } catch {
       message.error('读取会话列表失败')
     } finally {
@@ -153,16 +167,26 @@ export function AIAssistantPage() {
         const res = await fetch(`/api/ai/chats/${chatId}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-        if (!res.ok) throw new Error('Failed')
+        if (!res.ok) {
+          if (res.status === 404) {
+            // 如果会话不存在，静默清除 activeChatId，不要报错
+            setActiveChatId(null)
+            setActiveChat(null)
+            await fetchChats() // 刷新列表
+            return
+          }
+          throw new Error('Failed')
+        }
         const data = (await res.json()) as Chat
         setActiveChat(data)
       } catch {
-        message.error('读取会话失败')
+        // message.error('读取会话失败') // 移除报错，避免刷屏
+        console.error('Fetch chat failed')
       } finally {
         setChatLoading(false)
       }
     },
-    [token],
+    [token, fetchChats],
   )
 
   const createChat = useCallback(async () => {
@@ -248,9 +272,9 @@ export function AIAssistantPage() {
   const scrollMessagesToBottom = useCallback((mode?: 'auto' | 'force') => {
     const el = messagesWrapRef.current
     if (!el) return
-    if (mode !== 'force' && !isAtBottom) return
+    if (mode !== 'force' && !isAtBottomRef.current) return
     el.scrollTop = el.scrollHeight
-  }, [isAtBottom])
+  }, [])
 
   const streamChat = useCallback(
     async (chatId: string, content: string) => {
@@ -318,45 +342,58 @@ export function AIAssistantPage() {
           })
         }
 
+        let currentEventName = 'message'
+        let currentEventData: string[] = []
+
         while (true) {
           const { value, done } = await reader.read()
           if (done) break
           buffer += decoder.decode(value, { stream: true })
 
-          const parts = buffer.split('\n\n')
-          buffer = parts.pop() ?? ''
-          for (const part of parts) {
-            const lines = part.split('\n')
-            let eventName = 'message'
-            const dataLines: string[] = []
-            for (const line of lines) {
-              if (line.startsWith('event:')) eventName = line.slice(6).trim()
-              else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim())
-            }
-            const dataText = dataLines.join('\n')
-            if (eventName === 'delta') {
-              const payload = safeJsonParse<{ delta?: string }>(dataText)
-              if (payload?.delta) applyDelta(payload.delta)
-            } else if (eventName === 'error') {
-              finalize()
-              const payload = safeJsonParse<{ message?: string; detail?: string }>(dataText)
-              message.error(payload?.message || 'AI 请求失败')
-            } else if (eventName === 'stopped') {
-              finalize()
-            } else if (eventName === 'done') {
-              finalize()
-              const payload = safeJsonParse<{
-                usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
-                chatTotalTokens?: number
-              }>(dataText)
-              if (payload?.usage) setLastUsage(payload.usage)
-              if (typeof payload?.chatTotalTokens === 'number') {
-                const chatTotalTokens = payload.chatTotalTokens
-                setActiveChat((prev) => {
-                  if (!prev || prev.id !== chatId) return prev
-                  return { ...prev, totalTokens: chatTotalTokens }
-                })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+
+          for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed) {
+              if (currentEventData.length > 0) {
+                const dataText = currentEventData.join('\n')
+
+                if (currentEventName === 'delta') {
+                  const payload = safeJsonParse<{ delta?: string }>(dataText)
+                  if (payload?.delta) applyDelta(payload.delta)
+                } else if (currentEventName === 'error') {
+                  finalize()
+                  const payload = safeJsonParse<{ message?: string; detail?: string }>(dataText)
+                  message.error(payload?.message || 'AI 请求失败')
+                } else if (currentEventName === 'stopped') {
+                  finalize()
+                } else if (currentEventName === 'done') {
+                  finalize()
+                  const payload = safeJsonParse<{
+                    usage?: { promptTokens: number; completionTokens: number; totalTokens: number }
+                    chatTotalTokens?: number
+                  }>(dataText)
+                  if (payload?.usage) setLastUsage(payload.usage)
+                  if (typeof payload?.chatTotalTokens === 'number') {
+                    const chatTotalTokens = payload.chatTotalTokens
+                    setActiveChat((prev) => {
+                      if (!prev || prev.id !== chatId) return prev
+                      return { ...prev, totalTokens: chatTotalTokens }
+                    })
+                  }
+                }
+
+                currentEventName = 'message'
+                currentEventData = []
               }
+              continue
+            }
+
+            if (line.startsWith('event:')) {
+              currentEventName = line.slice(6).trim()
+            } else if (line.startsWith('data:')) {
+              currentEventData.push(line.slice(5).trim())
             }
           }
         }
@@ -388,19 +425,30 @@ export function AIAssistantPage() {
     await streamChat(chatId, content)
   }, [streaming, draft, hasPermission, activeChatId, createChat, streamChat])
 
+  // 初始加载列表
   useEffect(() => {
     fetchChats()
-  }, [fetchChats])
+    // 注意：这里不再依赖 activeChatId，防止无限循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]) // 仅当 token 变化时重新加载
 
   useEffect(() => {
     fetchConfig()
   }, [fetchConfig])
 
+  // 自动选中或创建会话
   useEffect(() => {
-    if (!chatsLoading && chats.length === 0 && !activeChatId) {
+    // 只有在初始化完成且列表加载完毕后执行
+    if (!hasInitialized || chatsLoading) return
+
+    // 如果没有会话，创建一个新的
+    if (chats.length === 0) {
       createChat()
+    } else if (!activeChatId) {
+      // 有会话但没选中，选中最新的
+      setActiveChatId(chats[0].id)
     }
-  }, [chatsLoading, chats.length, activeChatId, createChat])
+  }, [hasInitialized, chatsLoading, chats, activeChatId, createChat])
 
   useEffect(() => {
     if (activeChatId) fetchChat(activeChatId)
@@ -551,7 +599,8 @@ export function AIAssistantPage() {
             const el = messagesWrapRef.current
             if (!el) return
             const distance = el.scrollHeight - el.scrollTop - el.clientHeight
-            setIsAtBottom(distance < 80)
+            const isBottom = distance < 80
+            isAtBottomRef.current = isBottom
           }}
         >
           {chatLoading && !activeChat ? (
@@ -568,6 +617,8 @@ export function AIAssistantPage() {
               </div>
             ))
           )}
+          {/* Add a spacer to ensure the last message is visible above the absolute input box */}
+          <div style={{ height: 20 }} />
         </div>
 
         <div className="aiComposer">

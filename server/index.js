@@ -87,9 +87,17 @@ async function writeAiConfig(nextConfig) {
 
 async function readAiChats() {
   const defaults = { chats: [] };
-  const data = await readJsonWithDefault(AI_CHATS_FILE, defaults);
-  if (!data || typeof data !== 'object' || !Array.isArray(data.chats)) return defaults;
-  return data;
+  try {
+    const data = await readJsonWithDefault(AI_CHATS_FILE, defaults);
+    if (!data || typeof data !== 'object' || !Array.isArray(data.chats)) {
+      console.warn('Invalid ai_chats.json format, returning defaults');
+      return defaults;
+    }
+    return data;
+  } catch (err) {
+    console.error('Error reading ai_chats.json:', err);
+    return defaults;
+  }
 }
 
 async function writeAiChats(data) {
@@ -298,6 +306,7 @@ app.put('/api/ai/config', authenticateToken, requireRole(['admin', 'engineer']),
 
 app.get('/api/ai/chats', authenticateToken, async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-store');
     const data = await readAiChats();
     const owner = req.user?.username;
     const list = data.chats
@@ -335,6 +344,7 @@ app.post('/api/ai/chats', authenticateToken, async (req, res) => {
 
 app.get('/api/ai/chats/:id', authenticateToken, async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-store');
     const owner = req.user?.username;
     const data = await readAiChats();
     const chat = data.chats.find((c) => c.id === req.params.id && c.owner === owner);

@@ -63,8 +63,15 @@
 }
 
 .aiPanelInner {
-  overflow: hidden;
+  overflow: hidden !important;
   padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.aiPanelInner > * {
+  flex: 1;
+  min-height: 0;
 }
 
 .panelInnerLeft {
