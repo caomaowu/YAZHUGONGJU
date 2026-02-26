@@ -72,15 +72,28 @@ function MainLayout() {
       
     return list.map((t) => {
       const isAllowed = !t.allowedRoles || hasPermission(t.id)
+      const isAI = t.id === 'ai-knowledge'
+      
       return { 
         key: t.id, 
         icon: isAllowed ? t.icon : <LockOutlined style={{ color: '#ff4d4f' }} />, 
-        label: (
+        label: isAI ? (
+            <span style={{
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '15px',
+              letterSpacing: '0.5px',
+              textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+            }}>
+              AI 知识库
+            </span>
+        ) : (
           <span style={{ color: isAllowed ? 'inherit' : '#999' }}>
             {t.navLabel} {isAllowed ? '' : '(暂未开放)'}
           </span>
         ),
-        disabled: false // We handle click manually
+        disabled: false, // We handle click manually
+        className: isAI ? 'ai-menu-item' : ''
       };
     })
   }, [query, tools, hasPermission])

@@ -47,7 +47,7 @@ function createBuiltinTools(): ToolDefinition[] {
       navLabel: 'AI 知识库',
       route: '/ai-knowledge',
       icon: <RobotOutlined />,
-      order: 25,
+      order: 200,
       element: <AIKnowledgeBasePage />,
       allowedRoles: ['admin', 'engineer', 'viewer'],
     },
