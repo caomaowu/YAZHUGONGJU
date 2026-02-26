@@ -1,6 +1,24 @@
 import { expect, test } from '@playwright/test'
 
 test('pq2 页面包含标题、导出按钮与图表 canvas', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'auth_data',
+      JSON.stringify({
+        token: 'mock-token',
+        user: { username: 'admin', role: 'admin', name: 'Administrator' },
+      }),
+    )
+  })
+
+  await page.route('**/api/roles', async (route) => {
+    return route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify([{ id: 'admin', name: '管理员', description: '', permissions: ['*'], canEdit: true, canDelete: true }]),
+    })
+  })
+
   await page.goto('/#/pq2')
   await expect(page).toHaveURL(/#\/pq2/, { timeout: 15_000 })
 

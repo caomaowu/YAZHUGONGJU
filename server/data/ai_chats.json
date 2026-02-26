@@ -1,0 +1,49 @@
+{
+  "chats": [
+    {
+      "id": "dcebfc37-5e5e-47b6-9add-28295aafaf1a",
+      "owner": "admin",
+      "title": "新对话",
+      "createdAt": "2026-02-26T08:58:24.536Z",
+      "updatedAt": "2026-02-26T08:58:24.536Z",
+      "totalTokens": 0,
+      "messages": []
+    },
+    {
+      "id": "55b7a204-742b-4d55-9cb5-a8ee88169ac4",
+      "owner": "admin",
+      "title": "新对话",
+      "createdAt": "2026-02-26T08:58:31.034Z",
+      "updatedAt": "2026-02-26T08:58:31.034Z",
+      "totalTokens": 0,
+      "messages": []
+    },
+    {
+      "id": "9fcbbba0-a493-4821-9109-9927a94a1551",
+      "owner": "admin",
+      "title": "新对话",
+      "createdAt": "2026-02-26T08:58:38.085Z",
+      "updatedAt": "2026-02-26T08:58:38.085Z",
+      "totalTokens": 0,
+      "messages": []
+    },
+    {
+      "id": "c2c91934-e48c-4c5b-acb4-8c5f40eb5211",
+      "owner": "admin",
+      "title": "新对话",
+      "createdAt": "2026-02-26T08:58:38.394Z",
+      "updatedAt": "2026-02-26T08:58:38.394Z",
+      "totalTokens": 0,
+      "messages": []
+    },
+    {
+      "id": "939b7270-7f35-402b-82a8-0e5e60034bad",
+      "owner": "admin",
+      "title": "新对话",
+      "createdAt": "2026-02-26T08:58:40.160Z",
+      "updatedAt": "2026-02-26T08:58:40.160Z",
+      "totalTokens": 0,
+      "messages": []
+    }
+  ]
+}

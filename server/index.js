@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,76 @@ const LOCATIONS_FILE = path.join(__dirname, 'locations.json');
 const MODELS_FILE = path.join(__dirname, 'machine_models.json');
 const USERS_FILE = path.join(__dirname, 'users.json');
 const ROLES_FILE = path.join(__dirname, 'roles.json');
+const AI_DATA_DIR = path.join(__dirname, 'data');
+const AI_CONFIG_FILE = path.join(AI_DATA_DIR, 'ai_config.json');
+const AI_CHATS_FILE = path.join(AI_DATA_DIR, 'ai_chats.json');
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function maskApiKey(key) {
+  if (!key) return '';
+  const k = String(key);
+  if (k.length <= 8) return '*'.repeat(k.length);
+  return `${k.slice(0, 4)}****${k.slice(-4)}`;
+}
+
+function estimateTokens(text) {
+  const s = String(text ?? '');
+  let ascii = 0;
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (code <= 0x7f) ascii++;
+  }
+  const nonAscii = s.length - ascii;
+  return Math.max(1, Math.ceil(ascii / 4 + nonAscii / 2));
+}
+
+async function readJsonWithDefault(file, defaultValue) {
+  try {
+    if (!(await fs.pathExists(file))) {
+      await fs.writeJson(file, defaultValue, { spaces: 2 });
+      return defaultValue;
+    }
+    return await fs.readJson(file);
+  } catch {
+    await fs.writeJson(file, defaultValue, { spaces: 2 });
+    return defaultValue;
+  }
+}
+
+async function readAiConfig() {
+  const defaults = {
+    provider: 'openai-compatible',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: '',
+    defaultModel: '',
+    systemPrompt:
+      '你是一位资深压铸工艺专家。请用结构化方式回答，给出可操作建议、必要的计算或判断依据，并在存在风险时明确提示。',
+    maxContextMessages: 12,
+  };
+  const cfg = await readJsonWithDefault(AI_CONFIG_FILE, defaults);
+  return { ...defaults, ...cfg };
+}
+
+async function writeAiConfig(nextConfig) {
+  const cfg = await readAiConfig();
+  const merged = { ...cfg, ...nextConfig };
+  await fs.writeJson(AI_CONFIG_FILE, merged, { spaces: 2 });
+  return merged;
+}
+
+async function readAiChats() {
+  const defaults = { chats: [] };
+  const data = await readJsonWithDefault(AI_CHATS_FILE, defaults);
+  if (!data || typeof data !== 'object' || !Array.isArray(data.chats)) return defaults;
+  return data;
+}
+
+async function writeAiChats(data) {
+  await fs.writeJson(AI_CHATS_FILE, data, { spaces: 2 });
+}
 
 // Ensure data file exists
 if (!fs.existsSync(DATA_FILE)) {
@@ -82,6 +153,41 @@ if (!fs.existsSync(ROLES_FILE)) {
   fs.writeJsonSync(ROLES_FILE, defaultRoles, { spaces: 2 });
 }
 
+try {
+  const roles = fs.readJsonSync(ROLES_FILE);
+  if (Array.isArray(roles)) {
+    const ensurePerm = (roleId, perm) => {
+      const role = roles.find((r) => r && r.id === roleId);
+      if (!role || !Array.isArray(role.permissions)) return;
+      if (!role.permissions.includes(perm)) role.permissions.push(perm);
+    };
+    ensurePerm('admin', 'ai');
+    ensurePerm('engineer', 'ai');
+    ensurePerm('viewer', 'ai');
+    fs.writeJsonSync(ROLES_FILE, roles, { spaces: 2 });
+  }
+} catch {}
+
+fs.ensureDirSync(AI_DATA_DIR);
+if (!fs.existsSync(AI_CONFIG_FILE)) {
+  fs.writeJsonSync(
+    AI_CONFIG_FILE,
+    {
+      provider: 'openai-compatible',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: '',
+      defaultModel: '',
+      systemPrompt:
+        '你是一位资深压铸工艺专家。请用结构化方式回答，给出可操作建议、必要的计算或判断依据，并在存在风险时明确提示。',
+      maxContextMessages: 12,
+    },
+    { spaces: 2 },
+  );
+}
+if (!fs.existsSync(AI_CHATS_FILE)) {
+  fs.writeJsonSync(AI_CHATS_FILE, { chats: [] }, { spaces: 2 });
+}
+
 // Auth Middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -134,6 +240,276 @@ app.post('/api/auth/login', async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+app.get('/api/ai/config', authenticateToken, requireRole(['admin', 'engineer']), async (req, res) => {
+  try {
+    const cfg = await readAiConfig();
+    res.json({
+      provider: cfg.provider,
+      baseUrl: cfg.baseUrl,
+      defaultModel: cfg.defaultModel,
+      systemPrompt: cfg.systemPrompt,
+      maxContextMessages: cfg.maxContextMessages,
+      apiKeySet: !!cfg.apiKey,
+      apiKeyMasked: maskApiKey(cfg.apiKey),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to read ai config' });
+  }
+});
+
+app.put('/api/ai/config', authenticateToken, requireRole(['admin', 'engineer']), async (req, res) => {
+  try {
+    const { provider, baseUrl, apiKey, defaultModel, systemPrompt, maxContextMessages } = req.body ?? {};
+    const current = await readAiConfig();
+    let nextApiKey = current.apiKey;
+    if (typeof apiKey === 'string') {
+      const trimmed = apiKey.trim();
+      if (!trimmed) nextApiKey = '';
+      else if (!trimmed.includes('*')) nextApiKey = trimmed;
+    }
+
+    const next = await writeAiConfig({
+      provider: typeof provider === 'string' ? provider : current.provider,
+      baseUrl: typeof baseUrl === 'string' ? baseUrl.replace(/\/+$/, '') : current.baseUrl,
+      apiKey: nextApiKey,
+      defaultModel: typeof defaultModel === 'string' ? defaultModel : current.defaultModel,
+      systemPrompt: typeof systemPrompt === 'string' ? systemPrompt : current.systemPrompt,
+      maxContextMessages:
+        typeof maxContextMessages === 'number' && Number.isFinite(maxContextMessages)
+          ? Math.max(0, Math.min(100, Math.floor(maxContextMessages)))
+          : current.maxContextMessages,
+    });
+
+    res.json({
+      provider: next.provider,
+      baseUrl: next.baseUrl,
+      defaultModel: next.defaultModel,
+      systemPrompt: next.systemPrompt,
+      maxContextMessages: next.maxContextMessages,
+      apiKeySet: !!next.apiKey,
+      apiKeyMasked: maskApiKey(next.apiKey),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update ai config' });
+  }
+});
+
+app.get('/api/ai/chats', authenticateToken, async (req, res) => {
+  try {
+    const data = await readAiChats();
+    const owner = req.user?.username;
+    const list = data.chats
+      .filter((c) => c.owner === owner)
+      .map(({ messages, ...chat }) => chat)
+      .sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')));
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch ai chats' });
+  }
+});
+
+app.post('/api/ai/chats', authenticateToken, async (req, res) => {
+  try {
+    const data = await readAiChats();
+    const owner = req.user?.username;
+    const title = typeof req.body?.title === 'string' && req.body.title.trim() ? req.body.title.trim() : '新对话';
+    const chat = {
+      id: randomUUID(),
+      owner,
+      title,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+      totalTokens: 0,
+      messages: [],
+    };
+    data.chats.push(chat);
+    await writeAiChats(data);
+    const { messages, ...summary } = chat;
+    res.json(summary);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create ai chat' });
+  }
+});
+
+app.get('/api/ai/chats/:id', authenticateToken, async (req, res) => {
+  try {
+    const owner = req.user?.username;
+    const data = await readAiChats();
+    const chat = data.chats.find((c) => c.id === req.params.id && c.owner === owner);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    res.json(chat);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch ai chat' });
+  }
+});
+
+app.delete('/api/ai/chats/:id', authenticateToken, async (req, res) => {
+  try {
+    const owner = req.user?.username;
+    const data = await readAiChats();
+    const before = data.chats.length;
+    data.chats = data.chats.filter((c) => !(c.id === req.params.id && c.owner === owner));
+    if (data.chats.length === before) return res.status(404).json({ error: 'Chat not found' });
+    await writeAiChats(data);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete ai chat' });
+  }
+});
+
+app.post('/api/ai/chat/stream', authenticateToken, async (req, res) => {
+  const { chatId, message, model, temperature } = req.body ?? {};
+  if (!chatId || typeof chatId !== 'string') return res.status(400).json({ error: 'Missing chatId' });
+  if (typeof message !== 'string' || !message.trim()) return res.status(400).json({ error: 'Missing message' });
+
+  const owner = req.user?.username;
+  const cfg = await readAiConfig();
+  if (!cfg.baseUrl) return res.status(400).json({ error: 'Missing baseUrl' });
+  if (!cfg.apiKey) return res.status(400).json({ error: 'Missing apiKey' });
+  const usedModel = typeof model === 'string' && model.trim() ? model.trim() : cfg.defaultModel;
+  if (!usedModel) return res.status(400).json({ error: 'Missing model' });
+
+  const data = await readAiChats();
+  const chat = data.chats.find((c) => c.id === chatId && c.owner === owner);
+  if (!chat) return res.status(404).json({ error: 'Chat not found' });
+
+  res.status(200);
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const controller = new AbortController();
+  const onClose = () => controller.abort();
+  req.on('close', onClose);
+
+  const userContent = message.trim();
+  const userMsg = {
+    id: randomUUID(),
+    role: 'user',
+    content: userContent,
+    createdAt: nowIso(),
+    tokens: estimateTokens(userContent),
+  };
+  chat.messages.push(userMsg);
+
+  if (chat.title === '新对话') {
+    chat.title = userContent.slice(0, 20) + (userContent.length > 20 ? '…' : '');
+  }
+  chat.updatedAt = nowIso();
+
+  const maxCtx = Number.isFinite(cfg.maxContextMessages) ? Math.max(0, Math.floor(cfg.maxContextMessages)) : 12;
+  const history = chat.messages.slice(Math.max(0, chat.messages.length - maxCtx));
+  const upstreamMessages = [
+    { role: 'system', content: cfg.systemPrompt || '' },
+    ...history.map((m) => ({ role: m.role, content: m.content })),
+  ];
+
+  const promptTokens = upstreamMessages.reduce((sum, m) => sum + estimateTokens(m.content), 0);
+  let assistantText = '';
+
+  res.write(`event: meta\ndata: ${JSON.stringify({ chatId, model: usedModel })}\n\n`);
+
+  try {
+    const url = `${cfg.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+    const upstream = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${cfg.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: usedModel,
+        messages: upstreamMessages,
+        stream: true,
+        temperature: typeof temperature === 'number' ? temperature : undefined,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!upstream.ok || !upstream.body) {
+      const text = await upstream.text().catch(() => '');
+      res.write(`event: error\ndata: ${JSON.stringify({ message: `Upstream error: ${upstream.status}`, detail: text })}\n\n`);
+      res.end();
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    const reader = upstream.body.getReader();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
+
+      for (const part of parts) {
+        const lines = part.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const payload = trimmed.slice(5).trim();
+          if (!payload) continue;
+          if (payload === '[DONE]') {
+            buffer = '';
+            break;
+          }
+          let json;
+          try {
+            json = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+          const delta = json?.choices?.[0]?.delta?.content;
+          if (typeof delta === 'string' && delta) {
+            assistantText += delta;
+            res.write(`event: delta\ndata: ${JSON.stringify({ delta })}\n\n`);
+          }
+          const finish = json?.choices?.[0]?.finish_reason;
+          if (finish) {
+            buffer = '';
+          }
+        }
+      }
+    }
+  } catch (error) {
+    if (controller.signal.aborted) {
+      res.write(`event: stopped\ndata: ${JSON.stringify({ stopped: true })}\n\n`);
+    } else {
+      res.write(`event: error\ndata: ${JSON.stringify({ message: 'Stream failed' })}\n\n`);
+    }
+  } finally {
+    req.off('close', onClose);
+  }
+
+  const assistantTrimmed = assistantText.trimEnd();
+  const completionTokens = assistantTrimmed ? estimateTokens(assistantTrimmed) : 0;
+  const assistantMsg = {
+    id: randomUUID(),
+    role: 'assistant',
+    content: assistantTrimmed,
+    createdAt: nowIso(),
+    tokens: completionTokens,
+    promptTokens,
+  };
+  chat.messages.push(assistantMsg);
+  chat.totalTokens = Number(chat.totalTokens ?? 0) + promptTokens + completionTokens;
+  chat.updatedAt = nowIso();
+  await writeAiChats(data);
+
+  res.write(
+    `event: done\ndata: ${JSON.stringify({
+      text: assistantTrimmed,
+      usage: { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens },
+      chatTotalTokens: chat.totalTokens,
+    })}\n\n`,
+  );
+  res.end();
 });
 
 // Roles Management
@@ -383,7 +759,7 @@ if (fs.existsSync(distPath)) {
 
   // The "catchall" handler: for any request that doesn't
   // match one above, send back React's index.html file.
-  app.get('*', (req, res) => {
+  app.get(/.*/, (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }

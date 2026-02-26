@@ -27,6 +27,10 @@
   transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.appGrid.aiMode {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .panel {
   position: relative;
   border: 1px solid var(--panel-border);
@@ -56,6 +60,25 @@
   padding: 16px;
   box-sizing: border-box;
   overflow-y: auto; /* Allow scrolling inside panels */
+}
+
+.aiPanelInner {
+  overflow: hidden;
+  padding: 12px;
+}
+
+.panelInnerLeft {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.menuContent {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Scrollbar styling */
@@ -115,11 +138,35 @@
 
 .menuWrap {
   margin-top: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .menuWrap .ant-menu {
   background: transparent;
   border-inline-end: 0;
+}
+
+.menuFooter {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.aiEntryButton {
+  height: 40px;
+  border-radius: 14px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.95) 0%, rgba(236, 72, 153, 0.92) 60%, rgba(34, 197, 94, 0.85) 140%);
+  border: 0;
+  box-shadow: 0 16px 34px rgba(139, 92, 246, 0.22);
+}
+
+.aiEntryButton:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.98) 0%, rgba(236, 72, 153, 0.96) 60%, rgba(34, 197, 94, 0.88) 140%);
+  box-shadow: 0 20px 42px rgba(139, 92, 246, 0.28);
 }
 
 .centerHeader {

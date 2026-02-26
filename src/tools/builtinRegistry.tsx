@@ -1,4 +1,4 @@
-import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
@@ -7,6 +7,7 @@ import { SettingsPage } from '../pages/SettingsPage'
 import { TemplatesPage } from '../pages/TemplatesPage'
 import { MachineDatabasePage } from '../pages/MachineDatabasePage'
 import { UserManagementPage } from '../pages/UserManagementPage'
+import { AIAssistantPage } from '../pages/AIAssistantPage'
 
 function createBuiltinTools(): ToolDefinition[] {
   return [
@@ -70,6 +71,16 @@ function createBuiltinTools(): ToolDefinition[] {
       element: <UserManagementPage />,
       allowedRoles: ['admin'],
     },
+    {
+      id: 'ai',
+      title: 'AI 助手',
+      navLabel: 'AI 助手',
+      route: '/ai',
+      icon: <RobotOutlined />,
+      order: 90,
+      element: <AIAssistantPage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
+    },
   ]
 }
 
@@ -78,5 +89,4 @@ export const builtinToolRegistry = (() => {
   for (const tool of createBuiltinTools()) registry.register(tool)
   return registry
 })()
-
 

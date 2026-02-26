@@ -5,6 +5,7 @@ import {
   MenuOutlined,
   LogoutOutlined,
   LockOutlined,
+  RobotOutlined,
 } from '@ant-design/icons'
 import { useHashPath } from './core/router/hash'
 import { SharedStateProvider } from './core/state/SharedStateProvider'
@@ -25,6 +26,7 @@ function MainLayout() {
   const { theme } = useTheme()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth()
+  const isAiMode = path === '/ai'
 
   const allTools = useMemo(() => builtinToolRegistry.list(), [])
   
@@ -65,9 +67,9 @@ function MainLayout() {
 
   const menuItems = useMemo(() => {
     const q = query.trim()
-    const list = q
+    const list = (q
       ? tools.filter((t) => t.title.includes(q) || t.navLabel.includes(q) || (t.description ?? '').includes(q))
-      : tools
+      : tools).filter((t) => t.id !== 'ai')
       
     return list.map((t) => {
       const isAllowed = !t.allowedRoles || hasPermission(t.id)
@@ -149,6 +151,24 @@ function MainLayout() {
           items={menuItems}
         />
       </div>
+
+      <div className="menuFooter">
+        <Button
+          className="aiEntryButton"
+          icon={<RobotOutlined />}
+          onClick={() => {
+            if (!hasPermission('ai')) {
+              message.info('暂未开放');
+              return;
+            }
+            navigate('/ai')
+            setDrawerOpen(false)
+          }}
+          block
+        >
+          AI 助手
+        </Button>
+      </div>
     </div>
   )
 
@@ -182,15 +202,17 @@ function MainLayout() {
             </div>
         </Drawer>
 
-        <div className="appGrid">
-          <aside className="panel panelLeft">
-            <div className="panelInner">
-              {menuContent}
-            </div>
-          </aside>
+        <div className={`appGrid${isAiMode ? ' aiMode' : ''}`}>
+          {!isAiMode && (
+            <aside className="panel panelLeft">
+              <div className="panelInner panelInnerLeft">
+                {menuContent}
+              </div>
+            </aside>
+          )}
 
           <main className="panel panelMain">
-            <div key={activeTool?.id} className="panelInner page-transition">
+            <div key={activeTool?.id} className={`panelInner page-transition${isAiMode ? ' aiPanelInner' : ''}`}>
                 {activeTool?.element}
             </div>
           </main>
