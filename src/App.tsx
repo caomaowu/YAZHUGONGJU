@@ -26,6 +26,7 @@ function MainLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth()
   const isAiMode = path === '/ai'
+  const isAiKnowledgeMode = path === '/ai-knowledge'
 
   const allTools = useMemo(() => builtinToolRegistry.list(), [])
   
@@ -116,37 +117,46 @@ function MainLayout() {
 
   const menuContent = (
     <div className="menuContent">
-      <div className="leftHeader">
+      <div className="leftHeader" style={{ justifyContent: isAiKnowledgeMode ? 'center' : 'space-between' }}>
         <div className="brand">
           <div className="brandMark" />
-          <div className="brandText">
-            <div className="brandTitle">压铸工具箱</div>
-            <div className="brandSub">Lavender Workbench</div>
+          {!isAiKnowledgeMode && (
+            <div className="brandText">
+              <div className="brandTitle">压铸工具箱</div>
+              <div className="brandSub">Lavender Workbench</div>
+            </div>
+          )}
+        </div>
+        {!isAiKnowledgeMode && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+             <ThemeToggle />
+             <Tooltip title="退出登录">
+               <Button type="text" icon={<LogoutOutlined />} onClick={logout} size="small" />
+             </Tooltip>
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-           <ThemeToggle />
-           <Tooltip title="退出登录">
-             <Button type="text" icon={<LogoutOutlined />} onClick={logout} size="small" />
-           </Tooltip>
-        </div>
+        )}
       </div>
       
-      <div style={{ padding: '0 16px 8px 16px' }}>
-        <Tag color="purple">用户: {user?.name || user?.username} ({user?.role})</Tag>
-      </div>
+      {!isAiKnowledgeMode && (
+        <>
+          <div style={{ padding: '0 16px 8px 16px' }}>
+            <Tag color="purple">用户: {user?.name || user?.username} ({user?.role})</Tag>
+          </div>
 
-      <Input
-        prefix={<SearchOutlined />}
-        placeholder="搜索工具 / 参数 / 模板"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="searchInput"
-      />
+          <Input
+            prefix={<SearchOutlined />}
+            placeholder="搜索工具 / 参数 / 模板"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="searchInput"
+          />
+        </>
+      )}
 
       <div className="menuWrap">
         <Menu
           selectedKeys={[activeTool?.id ?? '']}
+          inlineCollapsed={isAiKnowledgeMode}
           onClick={({ key }) => {
             const tool = builtinToolRegistry.getById(String(key))
             if (!tool) return
@@ -199,7 +209,7 @@ function MainLayout() {
             </div>
         </Drawer>
 
-        <div className={`appGrid${isAiMode ? ' aiMode' : ''}`}>
+        <div className={`appGrid${isAiMode ? ' aiMode' : ''}${isAiKnowledgeMode ? ' aiKnowledgeMode' : ''}`}>
           {!isAiMode && (
             <aside className="panel panelLeft">
               <div className="panelInner panelInnerLeft">

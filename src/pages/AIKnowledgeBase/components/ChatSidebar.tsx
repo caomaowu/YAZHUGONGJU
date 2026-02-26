@@ -27,24 +27,24 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   return (
     <div style={{
-      width: 260,
+      width: '100%',
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
       borderRight: `1px solid ${token.colorBorder}`,
       backgroundColor: token.colorBgContainer,
-      padding: '16px 0',
+      padding: '12px 0',
     }}>
-      <div style={{ padding: '0 16px 16px' }}>
+      <div style={{ padding: '0 12px 12px' }}>
         <Button 
           type="primary" 
           icon={<PlusOutlined />} 
           block 
           onClick={onNewChat}
           style={{ 
-            height: 44, 
+            height: 36, 
             borderRadius: 8,
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 500,
             boxShadow: '0 2px 8px rgba(139, 92, 246, 0.2)'
           }}
@@ -53,8 +53,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </Button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
-        <Typography.Text type="secondary" style={{ fontSize: 12, padding: '0 12px', marginBottom: 8, display: 'block' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 6px' }}>
+        <Typography.Text type="secondary" style={{ fontSize: 12, padding: '0 8px', marginBottom: 4, display: 'block' }}>
           历史记录
         </Typography.Text>
         <List
@@ -63,12 +63,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             <List.Item
               onClick={() => onSelectSession(item.id)}
               style={{
-                padding: '10px 12px',
+                padding: '8px 10px',
                 cursor: 'pointer',
-                borderRadius: 8,
+                borderRadius: 6,
                 backgroundColor: item.id === currentSessionId ? token.colorFillTertiary : 'transparent',
                 transition: 'all 0.2s',
-                marginBottom: 4,
+                marginBottom: 2,
                 border: 'none',
                 position: 'relative',
               }}

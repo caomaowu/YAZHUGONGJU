@@ -71,19 +71,42 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const prevMessagesLength = useRef(0)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior })
   }
 
+  // Handle scroll events to detect if user is at the bottom
+  const handleScroll = () => {
+    if (!scrollRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
+    // If the user is within 50px of the bottom, we consider them "at the bottom" and enable auto-scroll
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50
+    setShouldAutoScroll(isAtBottom)
+  }
+
+  // Auto-scroll logic
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, loading])
+    const isNewMessage = messages.length > prevMessagesLength.current
+    prevMessagesLength.current = messages.length
+
+    if (isNewMessage) {
+      setShouldAutoScroll(true)
+      scrollToBottom()
+    } else if (shouldAutoScroll) {
+      scrollToBottom('auto') // Use instant scroll for streaming updates to avoid jitter
+    }
+  }, [messages, shouldAutoScroll])
 
   const handleSend = () => {
     if (!input.trim()) return
     onSendMessage(input)
     setInput('')
+    // Force scroll to bottom when sending a message
+    setShouldAutoScroll(true)
+    setTimeout(() => scrollToBottom(), 0)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -112,13 +135,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       {/* Messages Area */}
       <div 
         ref={scrollRef}
+        onScroll={handleScroll}
         style={{ 
           flex: 1, 
           overflowY: 'auto', 
-          padding: '24px 16px',
+          padding: '16px 12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 24,
+          gap: 16,
         }}
       >
         {messages.length === 0 ? (
@@ -131,35 +155,36 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             opacity: 0.8 
           }}>
             <div style={{ 
-              width: 64, 
-              height: 64, 
+              width: 56, 
+              height: 56, 
               borderRadius: '50%', 
               backgroundColor: token.colorPrimaryBg,
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              marginBottom: 24
+              marginBottom: 16
             }}>
-              <RobotOutlined style={{ fontSize: 32, color: token.colorPrimary }} />
+              <RobotOutlined style={{ fontSize: 28, color: token.colorPrimary }} />
             </div>
-            <Title level={3} style={{ marginBottom: 8 }}>有什么可以帮你的吗？</Title>
-            <Text type="secondary" style={{ marginBottom: 32 }}>我可以协助你进行压铸工艺分析、代码编写或解答技术问题</Text>
+            <Title level={4} style={{ marginBottom: 4 }}>有什么可以帮你的吗？</Title>
+            <Text type="secondary" style={{ marginBottom: 24, fontSize: 13 }}>我可以协助你进行压铸工艺分析、代码编写或解答技术问题</Text>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, maxWidth: 600, width: '100%' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, maxWidth: 600, width: '100%' }}>
               {suggestions.map((s, i) => (
                 <div 
                   key={i}
                   onClick={() => onSendMessage(s)}
                   style={{
-                    padding: '12px 16px',
+                    padding: '10px 14px',
                     backgroundColor: token.colorBgContainer,
                     border: `1px solid ${token.colorBorder}`,
-                    borderRadius: 12,
+                    borderRadius: 10,
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12
+                    gap: 10,
+                    fontSize: 13
                   }}
                   className="suggestion-card"
                 >
@@ -183,14 +208,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               key={msg.id} 
               style={{ 
                 display: 'flex', 
-                gap: 16, 
-                maxWidth: 800, 
+                gap: 12, 
+                maxWidth: '100%', 
                 width: '100%', 
                 margin: '0 auto',
                 flexDirection: msg.role === 'user' ? 'row-reverse' : 'row'
               }}
             >
               <Avatar 
+                size="small"
                 icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />} 
                 style={{ 
                   backgroundColor: msg.role === 'user' ? token.colorPrimary : token.colorSuccess,
@@ -200,18 +226,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <div style={{ 
                 flex: 1, 
                 backgroundColor: msg.role === 'user' ? token.colorPrimaryBg : token.colorBgContainer,
-                padding: '12px 16px',
-                borderRadius: 12,
-                borderTopLeftRadius: msg.role === 'assistant' ? 2 : 12,
-                borderTopRightRadius: msg.role === 'user' ? 2 : 12,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                padding: '10px 14px',
+                borderRadius: 8,
+                borderTopLeftRadius: msg.role === 'assistant' ? 2 : 8,
+                borderTopRightRadius: msg.role === 'user' ? 2 : 8,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
                 border: `1px solid ${token.colorBorderSecondary}`,
                 overflow: 'hidden'
               }}>
                 {msg.role === 'user' ? (
-                  <Text style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</Text>
+                  <Text style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{msg.content}</Text>
                 ) : (
-                  <div className="markdown-body" style={{ fontSize: 15, lineHeight: 1.6 }}>
+                  <div className="markdown-body" style={{ fontSize: 14, lineHeight: 1.5 }}>
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}
                       rehypePlugins={[rehypeKatex]}
@@ -247,19 +273,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* Input Area */}
       <div style={{ 
-        padding: '16px 24px 24px', 
+        padding: '12px 16px 16px', 
         backgroundColor: token.colorBgLayout,
         borderTop: `1px solid ${token.colorBorder}`,
-        maxWidth: 900,
+        maxWidth: '100%',
         margin: '0 auto',
         width: '100%',
         position: 'relative'
       }}>
         <div style={{ 
           backgroundColor: token.colorBgContainer, 
-          borderRadius: 16, 
-          padding: 8,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          borderRadius: 12, 
+          padding: 6,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
           border: `1px solid ${token.colorBorder}`,
           display: 'flex',
           flexDirection: 'column'
@@ -273,8 +299,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             bordered={false}
             style={{ 
               resize: 'none', 
-              padding: '8px 12px', 
-              fontSize: 16,
+              padding: '6px 10px', 
+              fontSize: 14,
               marginBottom: 4
             }}
           />

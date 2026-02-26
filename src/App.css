@@ -31,6 +31,25 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+.appGrid.aiKnowledgeMode {
+  grid-template-columns: 80px minmax(0, 1fr);
+}
+
+.appGrid.aiKnowledgeMode .panelInnerLeft {
+  padding: 12px 8px; /* Reduce padding for narrow sidebar */
+  align-items: center;
+}
+
+.appGrid.aiKnowledgeMode .leftHeader {
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.appGrid.aiKnowledgeMode .brand {
+  justify-content: center;
+}
+
 .panel {
   position: relative;
   border: 1px solid var(--panel-border);
@@ -470,13 +489,14 @@
   visibility: visible !important;
   color: #fff !important;
   /* Reset layout to avoid text being pushed out */
-  display: block !important; 
+  display: inline-block !important; 
   width: auto !important;
   overflow: visible !important;
   /* Force reset text fill color */
   -webkit-text-fill-color: #fff !important;
   text-fill-color: #fff !important;
   background: none !important;
+  margin-left: 8px !important;
 }
 
 .menuWrap .ant-menu-item.ai-menu-item .ant-menu-title-content span {
@@ -490,8 +510,8 @@
   background: none !important;
   -webkit-background-clip: border-box !important;
   background-clip: border-box !important;
-  -webkit-text-fill-color: initial !important; 
-  text-fill-color: initial !important;
+  -webkit-text-fill-color: #fff !important; 
+  text-fill-color: #fff !important;
   
   /* Ensure visibility */
   display: inline-block !important;

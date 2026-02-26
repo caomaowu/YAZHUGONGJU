@@ -7,6 +7,7 @@ import { ChatArea } from './components/ChatArea'
 import { SettingsModal } from './components/SettingsModal'
 import { BailianConfigModal } from './components/BailianConfigModal'
 import { KnowledgeBaseDrawer } from './components/KnowledgeBaseDrawer'
+import { SparkleEffect } from './components/SparkleEffect'
 import { useAIChat } from './hooks/useAIChat'
 import { useBailian } from './hooks/useBailian'
 
@@ -43,6 +44,15 @@ export const AIKnowledgeBasePage: React.FC = () => {
   const [kbDrawerVisible, setKbDrawerVisible] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [useRAG, setUseRAG] = useState(false)
+  const [animating, setAnimating] = useState(false)
+
+  const handleRAGSwitch = (checked: boolean) => {
+    setUseRAG(checked)
+    if (checked) {
+      setAnimating(true)
+      setTimeout(() => setAnimating(false), 1500)
+    }
+  }
 
   const currentSession = sessions.find(s => s.id === currentSessionId)
   const messages = currentSession ? currentSession.messages : []
@@ -52,9 +62,35 @@ export const AIKnowledgeBasePage: React.FC = () => {
   }
 
   return (
-    <Layout style={{ height: 'calc(100vh - 64px)', background: token.colorBgLayout, overflow: 'hidden' }}>
+    <Layout 
+      style={{ 
+        height: 'calc(100vh - 64px)', 
+        background: token.colorBgLayout, 
+        overflow: 'hidden',
+        position: 'relative'
+      }}
+      className={useRAG ? 'knowledge-base-mode' : ''}
+    >
+      <SparkleEffect active={animating} />
+      <style>{`
+        .knowledge-base-mode::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border: 2px solid #f59e0b;
+          border-radius: 8px;
+          pointer-events: none;
+          z-index: 900;
+          box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.2);
+          animation: border-pulse 2s infinite;
+        }
+        @keyframes border-pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.8; }
+        }
+      `}</style>
       <Sider
-        width={260}
+        width={200}
         theme="light"
         collapsed={sidebarCollapsed}
         collapsedWidth={0}
@@ -80,8 +116,24 @@ export const AIKnowledgeBasePage: React.FC = () => {
             }}>
               {!sidebarCollapsed && (
                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, color: token.colorTextSecondary }}>知识库模式</span>
-                    <Switch size="small" checked={useRAG} onChange={setUseRAG} />
+                    <span style={{ 
+                      fontSize: useRAG ? 14 : 13, 
+                      color: useRAG ? '#d97706' : '#8b5cf6',
+                      fontWeight: useRAG ? 700 : 600,
+                      transition: 'all 0.3s',
+                      textShadow: useRAG ? '0 0 10px rgba(245, 158, 11, 0.4)' : 'none'
+                    }}>
+                      {useRAG ? '✦ 知识库模式' : '知识库模式'}
+                    </span>
+                    <Switch 
+                      size="small" 
+                      checked={useRAG} 
+                      onChange={handleRAGSwitch}
+                      style={{
+                        backgroundColor: useRAG ? '#f59e0b' : undefined,
+                        boxShadow: useRAG ? '0 0 8px rgba(245, 158, 11, 0.6)' : 'none'
+                      }}
+                    />
                  </div>
               )}
               
@@ -90,7 +142,13 @@ export const AIKnowledgeBasePage: React.FC = () => {
                 type={useRAG ? "primary" : "text"}
                 icon={<CloudServerOutlined />} 
                 onClick={() => setBailianConfigVisible(true)}
-                style={{ textAlign: 'left', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}
+                style={{ 
+                  textAlign: 'left', 
+                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                  backgroundColor: useRAG ? '#fff7ed' : undefined,
+                  color: useRAG ? '#f59e0b' : undefined,
+                  borderColor: useRAG ? '#f59e0b' : undefined,
+                }}
               >
                 {!sidebarCollapsed && "百炼配置"}
               </Button>
@@ -145,6 +203,29 @@ export const AIKnowledgeBasePage: React.FC = () => {
             onSendMessage={handleSendMessage}
             onStopGeneration={stopGeneration}
           />
+          {useRAG && (
+            <div style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              background: 'rgba(251, 191, 36, 0.1)',
+              border: '1px solid #fbbf24',
+              borderRadius: 20,
+              padding: '4px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              color: '#d97706',
+              fontSize: 12,
+              fontWeight: 600,
+              zIndex: 100,
+              pointerEvents: 'none',
+              backdropFilter: 'blur(4px)'
+            }}>
+              <CloudServerOutlined />
+              知识库已连接
+            </div>
+          )}
         </Content>
       </Layout>
 
