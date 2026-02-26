@@ -1,8 +1,0 @@
-{
-  "provider": "openai-compatible",
-  "baseUrl": "https://apis.iflow.cn/v1",
-  "apiKey": "sk-7ee04b42d83611980c26292011b7e433",
-  "defaultModel": "deepseek-v3.2",
-  "systemPrompt": "你是一位资深压铸工艺专家。请用结构化方式回答，给出可操作建议、必要的计算或判断依据，并在存在风险时明确提示。",
-  "maxContextMessages": 20
-}

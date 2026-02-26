@@ -4,8 +4,7 @@
     "name": "管理员",
     "description": "系统超级管理员，拥有所有权限",
     "permissions": [
-      "*",
-      "ai"
+      "*"
     ],
     "canEdit": true,
     "canDelete": true
@@ -18,8 +17,7 @@
       "dashboard",
       "machines",
       "templates",
-      "settings",
-      "ai"
+      "settings"
     ],
     "canEdit": true,
     "canDelete": false
@@ -43,8 +41,7 @@
       "machines",
       "pq2",
       "templates",
-      "settings",
-      "ai"
+      "settings"
     ],
     "canEdit": false,
     "canDelete": false

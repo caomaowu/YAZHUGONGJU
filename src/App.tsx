@@ -5,7 +5,6 @@ import {
   MenuOutlined,
   LogoutOutlined,
   LockOutlined,
-  RobotOutlined,
 } from '@ant-design/icons'
 import { useHashPath } from './core/router/hash'
 import { SharedStateProvider } from './core/state/SharedStateProvider'
@@ -153,21 +152,6 @@ function MainLayout() {
       </div>
 
       <div className="menuFooter">
-        <Button
-          className="aiEntryButton"
-          icon={<RobotOutlined />}
-          onClick={() => {
-            if (!hasPermission('ai')) {
-              message.info('暂未开放');
-              return;
-            }
-            navigate('/ai')
-            setDrawerOpen(false)
-          }}
-          block
-        >
-          AI 助手
-        </Button>
       </div>
     </div>
   )
