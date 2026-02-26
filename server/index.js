@@ -536,7 +536,7 @@ app.get('/api/machine-models', async (req, res) => {
 // --- Aliyun Bailian Integration ---
 
 const getBailianConfig = async () => {
-  return await readJsonWithDefault(BAILIAN_CONFIG_FILE, {
+  const config = await readJsonWithDefault(BAILIAN_CONFIG_FILE, {
     accessKeyId: '',
     accessKeySecret: '',
     workspaceId: '',
@@ -544,6 +544,20 @@ const getBailianConfig = async () => {
     apiKey: '', // Default API Key
     knowledgeBaseId: ''
   });
+
+  const decode = (str) => {
+    if (str && typeof str === 'string' && str.startsWith('ENC_')) {
+      return Buffer.from(str.slice(4), 'base64').toString('utf-8');
+    }
+    return str;
+  };
+
+  return {
+    ...config,
+    accessKeyId: decode(config.accessKeyId),
+    accessKeySecret: decode(config.accessKeySecret),
+    apiKey: decode(config.apiKey)
+  };
 };
 
 const maskSensitive = (str, visibleChars = 8) => {
