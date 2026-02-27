@@ -48,5 +48,10 @@ export interface MachineModelSpecs {
   法兰高度_mm: number | string;
   顶出力_KN: number;
   顶出行程_mm: number;
+  系统工作压力_MPa?: number;
+  电机功率_KVA?: number;
+  油箱容量_L?: number;
+  机身外型尺寸_mm?: string;
+  哥林柱内距_mm?: string;
   [key: string]: unknown;
 }

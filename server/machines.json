@@ -1,353 +1,117 @@
 [
   {
-    "id": "m1",
-    "name": "1# 压铸机",
+    "id": "1772184304658",
+    "name": "DCC280 - 新设备",
     "brand": "力劲 (LK)",
-    "model": "DCC300",
-    "tonnage": 300,
+    "model": "DCC280",
+    "tonnage": 280,
     "location": "凤岗",
-    "status": "running",
+    "status": "offline",
     "specs": {
-      "clampingForce": 3000,
+      "clampingForce": 2800,
       "tieBarSpacing": [
-        580,
-        580
+        560,
+        560
       ],
       "dieHeightMin": 250,
-      "dieHeightMax": 600,
-      "ejectionStroke": 120,
-      "injectionRate": 4.5
-    }
-  },
-  {
-    "id": "m2",
-    "name": "2# 压铸机",
-    "brand": "伊之密 (YIZUMI)",
-    "model": "DM500",
-    "tonnage": 500,
-    "location": "凤岗",
-    "status": "idle",
-    "specs": {
-      "clampingForce": 5000,
-      "tieBarSpacing": [
-        720,
-        720
-      ],
-      "dieHeightMin": 300,
-      "dieHeightMax": 750,
-      "ejectionStroke": 150,
-      "injectionRate": 5.2
-    }
-  },
-  {
-    "id": "m3",
-    "name": "3# 压铸机",
-    "brand": "布勒 (Buhler)",
-    "model": "Carat 130",
-    "tonnage": 1300,
-    "location": "塘厦",
-    "status": "maintenance",
-    "specs": {
-      "clampingForce": 13000,
-      "tieBarSpacing": [
-        1100,
-        1100
-      ],
-      "dieHeightMin": 500,
-      "dieHeightMax": 1200,
-      "ejectionStroke": 250,
-      "injectionRate": 6
-    }
-  },
-  {
-    "id": "m4",
-    "name": "4# 压铸机",
-    "brand": "力劲 (LK)",
-    "model": "DCC1250",
-    "tonnage": 1250,
-    "location": "塘厦",
-    "status": "offline",
-    "specs": {
-      "clampingForce": 12500,
-      "tieBarSpacing": [
-        1050,
-        1050
-      ],
-      "dieHeightMin": 450,
-      "dieHeightMax": 1100,
-      "ejectionStroke": 230,
-      "injectionRate": 5.8
-    }
-  },
-  {
-    "id": "m5",
-    "name": "5# 压铸机",
-    "brand": "海天 (Haitian)",
-    "model": "HDC880",
-    "tonnage": 880,
-    "location": "新厂区",
-    "status": "running",
-    "specs": {
-      "clampingForce": 8800,
-      "tieBarSpacing": [
-        900,
-        900
-      ],
-      "dieHeightMin": 400,
-      "dieHeightMax": 950,
-      "ejectionStroke": 200,
-      "injectionRate": 5.5
-    }
-  },
-  {
-    "id": "1772033307731",
-    "name": "DCC2000 - 新设备",
-    "brand": "力劲 (LK)",
-    "model": "DCC2000",
-    "tonnage": 2000,
-    "location": "凤岗",
-    "status": "offline",
-    "specs": {
-      "clampingForce": 20000,
-      "tieBarSpacing": [
-        1350,
-        1350
-      ],
-      "dieHeightMin": 650,
-      "dieHeightMax": 1600,
-      "ejectionStroke": 300
+      "dieHeightMax": 650,
+      "ejectionStroke": 105
     },
     "rawSpecs": {
-      "型号": "DCC2000",
-      "锁模力_KN": 20000,
-      "锁模行程_mm": 1400,
+      "型号": "DCC280",
+      "锁模力_KN": 2800,
+      "锁模行程_mm": 460,
       "模具厚度_mm": {
-        "最小": 650,
-        "最大": 1600
+        "最小": 250,
+        "最大": 650
       },
-      "模板尺寸_mm": "2150×2150",
-      "容模尺寸_mm": "1350×1350",
+      "模板尺寸_mm": "860×860",
+      "容模尺寸_mm": "560×560",
       "压射配置": [
         {
-          "冲头直径_mm": "130-170",
-          "压射力_KN": 1500,
-          "射料行程_mm": 960,
-          "容量_铝_Kg": "24-41",
-          "铸造压力_MPa": "113-66",
-          "铸造面积_cm2": "1769-3030"
-        }
-      ],
-      "最大铸造面积_40MPa_cm2": 5000,
-      "压射位置_mm": "-175,-350",
-      "冲头行程_mm": 400,
-      "压室法兰直径_mm": 260,
-      "法兰高度_mm": 30,
-      "顶出力_KN": 650,
-      "顶出行程_mm": 300
-    }
-  },
-  {
-    "id": "1772033312722",
-    "name": "DCC1600 - 新设备",
-    "brand": "力劲 (LK)",
-    "model": "DCC1600",
-    "tonnage": 1600,
-    "location": "凤岗",
-    "status": "offline",
-    "specs": {
-      "clampingForce": 16000,
-      "tieBarSpacing": [
-        1180,
-        1180
-      ],
-      "dieHeightMin": 500,
-      "dieHeightMax": 1400,
-      "ejectionStroke": 250
-    },
-    "rawSpecs": {
-      "型号": "DCC1600",
-      "锁模力_KN": 16000,
-      "锁模行程_mm": 1200,
-      "模具厚度_mm": {
-        "最小": 500,
-        "最大": 1400
-      },
-      "模板尺寸_mm": "2010×1960",
-      "容模尺寸_mm": "1180×1180",
-      "压射配置": [
+          "冲头直径_mm": 40,
+          "压射力_KN": 315,
+          "射料行程_mm": 400,
+          "容量_铝_Kg": 1.5,
+          "铸造压力_MPa": 162,
+          "铸造面积_cm2": 170
+        },
         {
-          "冲头直径_mm": "110-150",
-          "压射力_KN": 1285,
-          "射料行程_mm": 930,
-          "容量_铝_Kg": "17-32",
-          "铸造压力_MPa": "137-73",
-          "铸造面积_cm2": "1165-2190"
-        }
-      ],
-      "最大铸造面积_40MPa_cm2": 4000,
-      "压射位置_mm": "-175,-350",
-      "冲头行程_mm": 360,
-      "压室法兰直径_mm": 260,
-      "法兰高度_mm": 25,
-      "顶出力_KN": 570,
-      "顶出行程_mm": 250
-    }
-  },
-  {
-    "id": "1772161253963",
-    "name": "DCC1250 - 新设备",
-    "brand": "力劲 (LK)",
-    "model": "DCC1250",
-    "tonnage": 1250,
-    "location": "凤岗",
-    "status": "offline",
-    "specs": {
-      "clampingForce": 12500,
-      "tieBarSpacing": [
-        1100,
-        1100
-      ],
-      "dieHeightMin": 450,
-      "dieHeightMax": 1180,
-      "ejectionStroke": 200
-    },
-    "rawSpecs": {
-      "型号": "DCC1250",
-      "锁模力_KN": 12500,
-      "锁模行程_mm": 1000,
-      "模具厚度_mm": {
-        "最小": 450,
-        "最大": 1180
-      },
-      "模板尺寸_mm": "1730×1740",
-      "容模尺寸_mm": "1100×1100",
-      "压射配置": [
-        {
-          "冲头直径_mm": "100-140",
-          "压射力_KN": 1075,
-          "射料行程_mm": 880,
-          "容量_铝_Kg": "13-25.4",
-          "铸造压力_MPa": "137-70",
-          "铸造面积_cm2": "910-1785"
-        }
-      ],
-      "最大铸造面积_40MPa_cm2": 3125,
-      "压射位置_mm": "-160,-320",
-      "冲头行程_mm": 320,
-      "压室法兰直径_mm": 240,
-      "法兰高度_mm": 25,
-      "顶出力_KN": 570,
-      "顶出行程_mm": 200
-    }
-  },
-  {
-    "id": "1772161268330",
-    "name": "DCC2000 - 新设备",
-    "brand": "力劲 (LK)",
-    "model": "DCC2000",
-    "tonnage": 2000,
-    "location": "凤岗",
-    "status": "offline",
-    "specs": {
-      "clampingForce": 20000,
-      "tieBarSpacing": [
-        1350,
-        1350
-      ],
-      "dieHeightMin": 650,
-      "dieHeightMax": 1600,
-      "ejectionStroke": 300
-    },
-    "rawSpecs": {
-      "型号": "DCC2000",
-      "锁模力_KN": 20000,
-      "锁模行程_mm": 1400,
-      "模具厚度_mm": {
-        "最小": 650,
-        "最大": 1600
-      },
-      "模板尺寸_mm": "2150×2150",
-      "容模尺寸_mm": "1350×1350",
-      "压射配置": [
-        {
-          "冲头直径_mm": "130-170",
-          "压射力_KN": 1500,
-          "射料行程_mm": 960,
-          "容量_铝_Kg": "24-41",
-          "铸造压力_MPa": "113-66",
-          "铸造面积_cm2": "1769-3030"
-        }
-      ],
-      "最大铸造面积_40MPa_cm2": 5000,
-      "压射位置_mm": "-175,-350",
-      "冲头行程_mm": 400,
-      "压室法兰直径_mm": 260,
-      "法兰高度_mm": 30,
-      "顶出力_KN": 650,
-      "顶出行程_mm": 300
-    }
-  },
-  {
-    "id": "1772161399243",
-    "name": "DCC400 - 新设备",
-    "brand": "力劲 (LK)",
-    "model": "DCC400",
-    "tonnage": 400,
-    "location": "凤岗",
-    "status": "offline",
-    "specs": {
-      "clampingForce": 4000,
-      "tieBarSpacing": [
-        620,
-        620
-      ],
-      "dieHeightMin": 300,
-      "dieHeightMax": 700,
-      "ejectionStroke": 125
-    },
-    "rawSpecs": {
-      "型号": "DCC400",
-      "锁模力_KN": 4000,
-      "锁模行程_mm": 550,
-      "模具厚度_mm": {
-        "最小": 300,
-        "最大": 700
-      },
-      "模板尺寸_mm": "970×970",
-      "容模尺寸_mm": "620×620",
-      "压射配置": [
+          "冲头直径_mm": 50,
+          "压射力_KN": 315,
+          "射料行程_mm": 400,
+          "容量_铝_Kg": 2.1,
+          "铸造压力_MPa": 113,
+          "铸造面积_cm2": 245
+        },
         {
           "冲头直径_mm": 60,
-          "压射力_KN": 410,
-          "射料行程_mm": 500,
-          "容量_铝_Kg": 2.7,
-          "铸造压力_MPa": 145,
-          "铸造面积_cm2": 275
-        },
-        {
-          "冲头直径_mm": 70,
-          "压射力_KN": 410,
-          "射料行程_mm": 500,
-          "容量_铝_Kg": 3.6,
-          "铸造压力_MPa": 106,
-          "铸造面积_cm2": 375
-        },
-        {
-          "冲头直径_mm": 80,
-          "压射力_KN": 410,
-          "射料行程_mm": 500,
-          "容量_铝_Kg": 4.7,
-          "铸造压力_MPa": 81,
-          "铸造面积_cm2": 490
+          "压射力_KN": 315,
+          "射料行程_mm": 400,
+          "容量_铝_Kg": 2.9,
+          "铸造压力_MPa": 82.6,
+          "铸造面积_cm2": 335
         }
       ],
-      "最大铸造面积_40MPa_cm2": 1000,
-      "压射位置_mm": -175,
-      "冲头行程_mm": 200,
+      "最大铸造面积_40MPa_cm2": 700,
+      "压射位置_mm": -125,
+      "冲头行程_mm": 140,
       "压室法兰直径_mm": 101.6,
       "法兰高度_mm": 12,
-      "顶出力_KN": 180,
-      "顶出行程_mm": 125
+      "顶出力_KN": 150,
+      "顶出行程_mm": 105
+    }
+  },
+  {
+    "id": "1772185560331",
+    "name": "DCC2500 - 新设备",
+    "brand": "力劲 (LK)",
+    "model": "DCC2500",
+    "tonnage": 2500,
+    "location": "凤岗",
+    "status": "offline",
+    "specs": {
+      "clampingForce": 25000,
+      "tieBarSpacing": [
+        1500,
+        1500
+      ],
+      "dieHeightMin": 800,
+      "dieHeightMax": 1800,
+      "ejectionStroke": 300
+    },
+    "rawSpecs": {
+      "型号": "DCC2500",
+      "锁模力_KN": 25000,
+      "锁模行程_mm": 1500,
+      "模具厚度_mm": {
+        "最小": 800,
+        "最大": 1800
+      },
+      "模板尺寸_mm": "2350×2350",
+      "容模尺寸_mm": "1500×1500",
+      "哥林柱内距_mm": "1500×1500",
+      "最大铸造面积_40MPa_cm2": 6250,
+      "压射位置_mm": "-200",
+      "冲头行程_mm": 1050,
+      "压室法兰直径_mm": 280,
+      "法兰高度_mm": 30,
+      "顶出力_KN": 750,
+      "顶出行程_mm": 300,
+      "系统工作压力_MPa": 16,
+      "电机功率_KVA": 135,
+      "油箱容量_L": 3700,
+      "机身外型尺寸_mm": "13600×5030×5080",
+      "压射配置": [
+        {
+          "冲头直径_mm": "140-180",
+          "压射力_KN": 1700,
+          "射料行程_mm": 1050,
+          "容量_铝_Kg": "30.3-50.1",
+          "铸造压力_MPa": "110-66",
+          "铸造面积_cm2": "2270-3785"
+        }
+      ]
     }
   }
 ]

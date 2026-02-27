@@ -109,6 +109,7 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
         </Descriptions.Item>
         <Descriptions.Item label="模板尺寸">{rawSpecs.模板尺寸_mm} mm</Descriptions.Item>
         <Descriptions.Item label="容模尺寸">{rawSpecs.容模尺寸_mm} mm</Descriptions.Item>
+        <Descriptions.Item label="哥林柱内距">{rawSpecs.哥林柱内距_mm ?? '-'} mm</Descriptions.Item>
         <Descriptions.Item label="最大铸造面积 (40MPa)">{rawSpecs.最大铸造面积_40MPa_cm2} cm²</Descriptions.Item>
         <Descriptions.Item label="压射位置">{rawSpecs.压射位置_mm} mm</Descriptions.Item>
         <Descriptions.Item label="冲头行程">{rawSpecs.冲头行程_mm} mm</Descriptions.Item>
@@ -116,6 +117,10 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
         <Descriptions.Item label="法兰高度">{rawSpecs.法兰高度_mm} mm</Descriptions.Item>
         <Descriptions.Item label="顶出力">{rawSpecs.顶出力_KN} KN</Descriptions.Item>
         <Descriptions.Item label="顶出行程">{rawSpecs.顶出行程_mm} mm</Descriptions.Item>
+        <Descriptions.Item label="系统工作压力">{rawSpecs.系统工作压力_MPa ?? '-'} MPa</Descriptions.Item>
+        <Descriptions.Item label="电机功率">{rawSpecs.电机功率_KVA ?? '-'} KVA</Descriptions.Item>
+        <Descriptions.Item label="油箱容量">{rawSpecs.油箱容量_L ?? '-'} L</Descriptions.Item>
+        <Descriptions.Item label="机身外型尺寸">{rawSpecs.机身外型尺寸_mm ?? '-'} mm</Descriptions.Item>
       </Descriptions>
     );
   };
