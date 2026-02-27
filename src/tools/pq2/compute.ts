@@ -51,9 +51,12 @@ export function applyParamLinkage(raw: PQ2Params): PQ2Params {
     const dhyd = raw.hydraulicCylinderDiameterMm / 10 // 转换为cm
     const dpt = raw.plungerDiameterMm / 10 // 转换为cm
     if (dpt > 0) {
-      // Pm = Phyd * (dhyd/dpt)^2，结果单位转换为MPa (1 kg/cm² ≈ 0.098 MPa)
-      const pmKgCm2 = phyd * 10 * Math.pow(dhyd / dpt, 2) // 先按kg/cm²计算
-      next.machineMaxPressureMPa = pmKgCm2 * 0.0980665 // 转换为MPa
+      // Pm = Phyd * (dhyd/dpt)^2
+      // 若 Phyd 单位为 MPa，则结果也是 MPa (压力放大比是纯几何比例)
+      // 若 Phyd 单位为 kg/cm² (bar)，则结果也是 kg/cm²
+      // 此处假设输入 hydraulicPressureMPa 为 MPa
+      const ratio = Math.pow(dhyd / dpt, 2)
+      next.machineMaxPressureMPa = phyd * ratio
     }
   }
 
@@ -202,8 +205,12 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
   const pWindowMaxMPa = paToMPa(pWindowMaxPa)
   const pWindowMinMPa = paToMPa(pWindowMinPa)
 
-  // Qmin = Vcav / t (基于填充时间的最小流量)
-  const qWindowMinLps = qRequiredLps // 当前使用需求流量作为Qmin
+  // Qmin = Vcav / t (基于最大填充时间的最小流量)
+  // 如果提供了 maxFillTimeS，则使用它计算 Qmin；否则使用当前 fillTimeS（此时窗口左边界贴合工作点）
+  const qWindowMinLps =
+    params.maxFillTimeS && params.maxFillTimeS > 0
+      ? m3sToLps(castingVolumeM3 / params.maxFillTimeS)
+      : qRequiredLps
 
   const intermediate = {
     gateAreaMm2: params.gateAreaMm2,
@@ -248,6 +255,10 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
   if (params.useCustomGateArea) warnings.push('浇口面积使用自定义值，注意与几何尺寸一致性')
   if (params.fillTimeS < 0.02) warnings.push('充型时间偏小，可能导致需求流量/压力显著升高')
   if (params.fillTimeS > 0.2) warnings.push('充型时间偏大，可能导致工作点落入低速区域')
+  
+  if (params.maxFillTimeS && params.maxFillTimeS > 0 && params.fillTimeS > params.maxFillTimeS) {
+    warnings.push('当前充型时间超过最大允许时间，工作点在工艺窗口左侧（不可行）')
+  }
 
   const gateVelocityMps = gateAreaM2 > 0 ? qRequiredM3s / gateAreaM2 : 0
   if (gateVelocityMps > 0 && gateVelocityMps > 120) warnings.push('浇口流速偏高，请确认浇口面积与充型时间')
@@ -277,6 +288,7 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
     // 工艺窗口参数
     vGateMaxMps: clampNumber(params.vGateMaxMps, 10, 200),
     vGateMinMps: clampNumber(params.vGateMinMps, 5, 100),
+    maxFillTimeS: clampNumber(params.maxFillTimeS ?? 0, 0, 60),
     // 液压参数
     hydraulicPressureMPa: clampNumber(params.hydraulicPressureMPa, 1, 500),
     hydraulicCylinderDiameterMm: clampNumber(params.hydraulicCylinderDiameterMm, 1, 1000),

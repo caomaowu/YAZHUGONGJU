@@ -13,6 +13,7 @@ export type PQ2Params = {
   castingMassKg: number
   castingVolumeCm3: number
   fillTimeS: number
+  maxFillTimeS?: number
   gateWidthMm: number
   gateThicknessMm: number
   useCustomGateArea: boolean

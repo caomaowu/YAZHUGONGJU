@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type * as echarts from 'echarts'
 import {
   Alert,
@@ -14,6 +14,9 @@ import {
   Tag,
   Typography,
   theme,
+  Tabs,
+  Col,
+  Row,
 } from 'antd'
 import { DownloadOutlined, FileImageOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useSharedValue } from '../core/state/hooks'
@@ -44,6 +47,7 @@ const DEFAULT_PARAMS: PQ2Params = {
   useCustomProcessWindow: false,
   vGateMaxMps: 60,
   vGateMinMps: 30,
+  maxFillTimeS: 0, // 0表示不使用
   // 液压参数默认值
   useHydraulicMode: false,
   hydraulicPressureMPa: 16, // MPa (约160 kg/cm²)
@@ -55,6 +59,7 @@ export function PQ2Page() {
   const [machineName] = useSharedValue<string>('global', 'machineName', '未设置')
   const [materialName] = useSharedValue<string>('global', 'materialName', 'A380')
   const [savedParams, setSavedParams] = useSharedValue<PQ2Params>('pq2', 'params', DEFAULT_PARAMS)
+  const [activeTab, setActiveTab] = useState('machine')
 
   const [form] = Form.useForm<PQ2Params>()
   const chartRef = useRef<echarts.ECharts | null>(null)
@@ -110,6 +115,314 @@ export function PQ2Page() {
     downloadJson(payload, `PQ2_${stamp}.json`)
   }
 
+  const renderMachineTab = () => (
+    <Row gutter={24}>
+      <Col span={12}>
+        <div style={{ marginBottom: 16 }}>
+          <Space align="center" style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Typography.Text strong>液压参数模式</Typography.Text>
+            <Form.Item name="useHydraulicMode" valuePropName="checked" noStyle>
+              <Switch size="small" />
+            </Form.Item>
+          </Space>
+          
+          <Form.Item noStyle shouldUpdate={(p, n) => p.useHydraulicMode !== n.useHydraulicMode}>
+            {({ getFieldValue }) => {
+              const useHydraulic = getFieldValue('useHydraulicMode') as boolean
+              return useHydraulic ? (
+                <>
+                  <Form.Item
+                    label="储能器压力 (Phyd)"
+                    name="hydraulicPressureMPa"
+                    rules={[{ required: true, type: 'number', min: 1 }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={0} step={1} addonAfter="MPa" />
+                  </Form.Item>
+                  <Form.Item
+                    label="压射缸直径 (dhyd)"
+                    name="hydraulicCylinderDiameterMm"
+                    rules={[{ required: true, type: 'number', min: 1 }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={0} step={1} addonAfter="mm" />
+                  </Form.Item>
+                </>
+              ) : (
+                <Form.Item
+                  label="最大金属静压力 (Pm)"
+                  name="machineMaxPressureMPa"
+                  rules={[{ required: true, type: 'number', min: 1 }]}
+                >
+                  <InputNumber style={{ width: '100%' }} min={0} step={1} addonAfter="MPa" />
+                </Form.Item>
+              )
+            }}
+          </Form.Item>
+        </div>
+      </Col>
+      <Col span={12}>
+        <Form.Item
+          label="冲头直径 (dpt)"
+          name="plungerDiameterMm"
+          rules={[{ required: true, type: 'number', min: 1 }]}
+        >
+          <InputNumber style={{ width: '100%' }} min={0} step={1} addonAfter="mm" />
+        </Form.Item>
+        <Form.Item
+          label="最大空压射速度 (Vds)"
+          name="plungerMaxSpeedMps"
+          rules={[{ required: true, type: 'number', min: 0.1 }]}
+        >
+          <InputNumber style={{ width: '100%' }} min={0} step={0.1} addonAfter="m/s" />
+        </Form.Item>
+        
+        <Form.Item noStyle shouldUpdate>
+          {({ getFieldValue }) => {
+            const useHydraulic = getFieldValue('useHydraulicMode') as boolean
+            if (!useHydraulic) return null
+            
+            const phyd = getFieldValue('hydraulicPressureMPa') as number
+            const dhyd = getFieldValue('hydraulicCylinderDiameterMm') as number
+            const dpt = getFieldValue('plungerDiameterMm') as number
+            let calculatedPressure = 0
+            if (dpt > 0) {
+              const ratio = Math.pow(dhyd / dpt, 2)
+              calculatedPressure = phyd * ratio
+            }
+            return (
+              <div style={{ padding: '8px 12px', background: 'rgba(139, 92, 246, 0.08)', borderRadius: 8, marginTop: 8 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  计算所得最大金属静压力: {' '}
+                  <Typography.Text strong style={{ color: token.colorPrimary }}>
+                    {calculatedPressure.toFixed(2)} MPa
+                  </Typography.Text>
+                </Typography.Text>
+              </div>
+            )
+          }}
+        </Form.Item>
+      </Col>
+    </Row>
+  )
+
+  const renderDieTab = () => (
+    <Row gutter={24}>
+      <Col span={12}>
+        <div style={{ marginBottom: 16 }}>
+          <Space align="center" style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Typography.Text strong>自定义浇口面积</Typography.Text>
+            <Form.Item name="useCustomGateArea" valuePropName="checked" noStyle>
+              <Switch size="small" />
+            </Form.Item>
+          </Space>
+          
+          <Form.Item noStyle shouldUpdate={(p, n) => p.useCustomGateArea !== n.useCustomGateArea}>
+            {({ getFieldValue }) => {
+              const custom = getFieldValue('useCustomGateArea')
+              return (
+                <>
+                  <Form.Item label="浇口宽" name="gateWidthMm" rules={[{ required: true, type: 'number', min: 0.1 }]}>
+                    <InputNumber style={{ width: '100%' }} min={0} step={1} disabled={custom} addonAfter="mm" />
+                  </Form.Item>
+                  <Form.Item
+                    label="浇口厚"
+                    name="gateThicknessMm"
+                    rules={[{ required: true, type: 'number', min: 0.1 }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={0} step={0.1} disabled={custom} addonAfter="mm" />
+                  </Form.Item>
+                  {custom && (
+                    <Form.Item
+                      label="浇口面积 (Ag)"
+                      name="gateAreaMm2"
+                      rules={[{ required: true, type: 'number', min: 1 }]}
+                    >
+                      <InputNumber style={{ width: '100%' }} min={0} step={1} addonAfter="mm²" />
+                    </Form.Item>
+                  )}
+                </>
+              )
+            }}
+          </Form.Item>
+        </div>
+      </Col>
+      <Col span={12}>
+        <Form.Item
+          label="流量系数 (Cd)"
+          name="dischargeCoeff"
+          rules={[{ required: true, type: 'number', min: 0.01, max: 1 }]}
+          tooltip="优秀: 0.7-0.8, 良好: 0.6-0.7, 一般: 0.5-0.6"
+        >
+          <InputNumber style={{ width: '100%' }} min={0.01} max={1} step={0.01} />
+        </Form.Item>
+        <Form.Item label="其他压降" name="extraLossMPa" rules={[{ required: true, type: 'number', min: 0 }]}>
+          <InputNumber style={{ width: '100%' }} min={0} step={1} addonAfter="MPa" />
+        </Form.Item>
+      </Col>
+    </Row>
+  )
+
+  const renderProcessTab = () => (
+    <Row gutter={24}>
+      <Col span={12}>
+        <div style={{ marginBottom: 16 }}>
+          <Space align="center" style={{ width: '100%', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Typography.Text strong>自定义工艺窗口</Typography.Text>
+            <Form.Item name="useCustomProcessWindow" valuePropName="checked" noStyle>
+              <Switch size="small" />
+            </Form.Item>
+          </Space>
+
+          <Form.Item
+            label="最大浇口速度 (Vmax)"
+            name="vGateMaxMps"
+            rules={[{ required: true, type: 'number', min: 10 }]}
+          >
+            <InputNumber style={{ width: '100%' }} min={10} max={200} step={5} addonAfter="m/s" />
+          </Form.Item>
+          <Form.Item
+            label="最小浇口速度 (Vmin)"
+            name="vGateMinMps"
+            rules={[{ required: true, type: 'number', min: 5 }]}
+          >
+            <InputNumber style={{ width: '100%' }} min={5} max={100} step={5} addonAfter="m/s" />
+          </Form.Item>
+        </div>
+      </Col>
+      <Col span={12}>
+        <Form.Item
+          label="充型时间 (t)"
+          name="fillTimeS"
+          rules={[{ required: true, type: 'number', min: 0.001 }]}
+        >
+          <InputNumber style={{ width: '100%' }} min={0} step={0.01} addonAfter="s" />
+        </Form.Item>
+        <Form.Item
+          label="最大充型时间限制 (t_max)"
+          name="maxFillTimeS"
+          tooltip="用于确定工艺窗口的最小流量边界 Qmin。若设为0则不显示左边界。"
+        >
+          <InputNumber style={{ width: '100%' }} min={0} step={0.01} placeholder="可选" addonAfter="s" />
+        </Form.Item>
+      </Col>
+    </Row>
+  )
+
+  const renderMaterialTab = () => (
+    <Row gutter={24}>
+      <Col span={12}>
+        <Form.Item label="材料" name="materialId" rules={[{ required: true }]}>
+          <Select
+            options={PQ2_MATERIALS.map((m) => ({ value: m.id, label: m.name }))}
+            showSearch
+            optionFilterProp="label"
+            onChange={(val) => {
+              const mat = getMaterialById(val)
+              if (mat) {
+                form.setFieldValue('densityKgM3', mat.densityKgM3)
+              }
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="密度 (ρ)"
+          name="densityKgM3"
+          rules={[{ required: true, type: 'number', min: 1 }]}
+        >
+          <InputNumber style={{ width: '100%' }} min={1} step={10} addonAfter="kg/m³" />
+        </Form.Item>
+      </Col>
+      <Col span={12}>
+        <Form.Item label="输入基准" name="inputBasis" rules={[{ required: true }]}>
+          <Select
+            options={[
+              { value: 'mass', label: '质量 (kg)' },
+              { value: 'volume', label: '体积 (cm³)' },
+            ]}
+            onChange={(val) => {
+              const values = form.getFieldsValue()
+              const density = values.densityKgM3 || 1
+              if (val === 'mass') {
+                // Volume -> Mass
+                const vol = values.castingVolumeCm3 || 0
+                const mass = (vol * density) / 1e6
+                form.setFieldValue('castingMassKg', Number(mass.toFixed(4)))
+              } else {
+                // Mass -> Volume
+                const mass = values.castingMassKg || 0
+                const vol = (mass * 1e6) / density
+                form.setFieldValue('castingVolumeCm3', Number(vol.toFixed(1)))
+              }
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          noStyle
+          shouldUpdate={(p, n) => p.inputBasis !== n.inputBasis}
+        >
+          {({ getFieldValue }) => {
+            const basis = getFieldValue('inputBasis') as PQ2Params['inputBasis']
+            return basis === 'mass' ? (
+              <Form.Item
+                label="总充型质量"
+                name="castingMassKg"
+                rules={[{ required: true, type: 'number', min: 0.001 }]}
+              >
+                <InputNumber style={{ width: '100%' }} min={0} step={0.1} addonAfter="kg" />
+              </Form.Item>
+            ) : (
+              <Form.Item
+                label="总充型体积"
+                name="castingVolumeCm3"
+                rules={[{ required: true, type: 'number', min: 1 }]}
+              >
+                <InputNumber style={{ width: '100%' }} min={0} step={10} addonAfter="cm³" />
+              </Form.Item>
+            )
+          }}
+        </Form.Item>
+
+        <Form.Item
+          noStyle
+          shouldUpdate={(p, n) =>
+            p.castingMassKg !== n.castingMassKg ||
+            p.castingVolumeCm3 !== n.castingVolumeCm3 ||
+            p.inputBasis !== n.inputBasis ||
+            p.densityKgM3 !== n.densityKgM3
+          }
+        >
+          {({ getFieldValue }) => {
+            const basis = getFieldValue('inputBasis') as PQ2Params['inputBasis']
+            const density = Number(getFieldValue('densityKgM3') ?? 1)
+            const massInput = Number(getFieldValue('castingMassKg') ?? 0)
+            const volInput = Number(getFieldValue('castingVolumeCm3') ?? 0)
+            
+            let displayVal = ''
+            if (basis === 'mass') {
+              const calcVol = (massInput * 1e6) / density
+              displayVal = `${calcVol.toFixed(0)} cm³`
+            } else {
+              const calcMass = (volInput * density) / 1e6
+              displayVal = `${calcMass.toFixed(3)} kg`
+            }
+
+            return (
+              <div style={{ padding: '8px 12px', background: 'rgba(139, 92, 246, 0.08)', borderRadius: 8, marginTop: 8 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {basis === 'mass' ? '联动总充型体积: ' : '联动总充型质量: '}
+                  <Typography.Text strong style={{ color: token.colorPrimary }}>
+                    {displayVal}
+                  </Typography.Text>
+                </Typography.Text>
+              </div>
+            )
+          }}
+        </Form.Item>
+      </Col>
+    </Row>
+  )
+
   return (
     <>
       <div className="centerHeader">
@@ -134,9 +447,47 @@ export function PQ2Page() {
       </div>
 
       <div className="centerBody">
-        <div className="cardGrid">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Card className="softCard" title="输入参数" extra={
+            <Space>
+               <Button
+                  size="small"
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    const material = getMaterialById(form.getFieldValue('materialId'))
+                    const reset = { ...DEFAULT_PARAMS, densityKgM3: material.densityKgM3, materialId: material.id }
+                    form.setFieldsValue(reset)
+                    setSavedParams(reset)
+                  }}
+                >
+                  重置
+                </Button>
+            </Space>
+          }>
+             <Form<PQ2Params>
+              form={form}
+              layout="vertical"
+              initialValues={initialParams}
+              onValuesChange={(_, next) => {
+                setSavedParams(next)
+              }}
+            >
+              <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                type="card"
+                items={[
+                  { key: 'machine', label: '机床', children: renderMachineTab() },
+                  { key: 'die', label: '模具', children: renderDieTab() },
+                  { key: 'process', label: '工艺', children: renderProcessTab() },
+                  { key: 'material', label: '材料', children: renderMaterialTab() },
+                ]}
+              />
+            </Form>
+          </Card>
+
           <Card
-            className="softCard span10"
+            className="softCard"
             title="PQ² 图（P - Q²）"
             extra={
               <Space size={8}>
@@ -174,7 +525,7 @@ export function PQ2Page() {
 
             <Divider style={{ margin: '16px 0' }} />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
               <div className="pill" style={{ padding: '16px' }}>
                 <Space align="center" style={{ marginBottom: 12 }}>
                   <div style={{ width: 4, height: 16, background: token.colorPrimary, borderRadius: 2 }} />
@@ -183,44 +534,44 @@ export function PQ2Page() {
                   </Typography.Text>
                   <Tag color="purple" style={{ fontSize: '11px', padding: '0 6px', lineHeight: '18px' }}>Result</Tag>
                 </Space>
-                <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
+                <Descriptions size="small" column={1} styles={{ label: { color: token.colorTextSecondary } }}>
                   <Descriptions.Item label="需求流量 Q">
-                    {computeResult.intermediate.qRequiredLps.toFixed(2)} L/s
+                    {computeResult.intermediate.qRequiredLps?.toFixed(2) ?? '-'} L/s
                   </Descriptions.Item>
                   <Descriptions.Item label="需求 Q²">
-                    {computeResult.intermediate.xRequiredLps2.toFixed(2)} (L/s)²
+                    {computeResult.intermediate.xRequiredLps2?.toFixed(2) ?? '-'} (L/s)²
                   </Descriptions.Item>
                   <Descriptions.Item label="机台最大流量">
-                    {computeResult.intermediate.qMaxLps.toFixed(2)} L/s
+                    {computeResult.intermediate.qMaxLps?.toFixed(2) ?? '-'} L/s
                   </Descriptions.Item>
                   <Descriptions.Item label="浇口速度 Vg">
                     <Typography.Text
                       type={
-                        computeResult.intermediate.vGateMps >= 30 && computeResult.intermediate.vGateMps <= 60
+                        (computeResult.intermediate.vGateMps ?? 0) >= 30 && (computeResult.intermediate.vGateMps ?? 0) <= 60
                           ? 'success'
                           : 'warning'
                       }
                       strong
                     >
-                      {computeResult.intermediate.vGateMps.toFixed(1)} m/s
+                      {computeResult.intermediate.vGateMps?.toFixed(1) ?? '-'} m/s
                     </Typography.Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="需求压力 P_die">
-                    {computeResult.points.operating.pRequiredMPa.toFixed(2)} MPa
+                    {computeResult.points.operating.pRequiredMPa?.toFixed(2) ?? '-'} MPa
                   </Descriptions.Item>
                   <Descriptions.Item label="机台可用 P_machine">
-                    {computeResult.points.operating.pMachineMPa.toFixed(2)} MPa
+                    {computeResult.points.operating.pMachineMPa?.toFixed(2) ?? '-'} MPa
                   </Descriptions.Item>
                   <Descriptions.Item label="裕量">
-                    <Typography.Text type={computeResult.points.operating.marginMPa >= 0 ? 'success' : 'danger'} strong>
-                      {computeResult.points.operating.marginMPa.toFixed(2)} MPa
+                    <Typography.Text type={(computeResult.points.operating.marginMPa ?? 0) >= 0 ? 'success' : 'danger'} strong>
+                      {computeResult.points.operating.marginMPa?.toFixed(2) ?? '-'} MPa
                     </Typography.Text>
                   </Descriptions.Item>
                 </Descriptions>
                 {computeResult.points.intersect ? (
                   <>
                     <Divider style={{ margin: '12px 0' }} />
-                    <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
+                    <Descriptions size="small" column={1} styles={{ label: { color: token.colorTextSecondary } }}>
                       <Descriptions.Item label="交点 Q">
                         {computeResult.points.intersect.qLps.toFixed(2)} L/s
                       </Descriptions.Item>
@@ -233,7 +584,7 @@ export function PQ2Page() {
                 {computeResult.points.processWindow ? (
                   <>
                     <Divider style={{ margin: '12px 0' }} />
-                    <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
+                    <Descriptions size="small" column={1} styles={{ label: { color: token.colorTextSecondary } }}>
                       <Descriptions.Item label="工艺窗口 Pmax">
                         {computeResult.points.processWindow.pMaxMPa.toFixed(2)} MPa
                       </Descriptions.Item>
@@ -256,24 +607,24 @@ export function PQ2Page() {
                   </Typography.Text>
                   <Tag color="purple" style={{ fontSize: '11px', padding: '0 6px', lineHeight: '18px' }}>Debug</Tag>
                 </Space>
-                <Descriptions size="small" column={3} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
+                <Descriptions size="small" column={2} styles={{ label: { color: token.colorTextSecondary } }}>
                   <Descriptions.Item label="浇口面积">
-                    {computeResult.intermediate.gateAreaMm2.toFixed(2)} mm²
+                    {computeResult.intermediate.gateAreaMm2?.toFixed(2) ?? '-'} mm²
                   </Descriptions.Item>
                   <Descriptions.Item label="总充型体积">
-                    {computeResult.intermediate.castingVolumeCm3.toFixed(0)} cm³
+                    {computeResult.intermediate.castingVolumeCm3?.toFixed(0) ?? '-'} cm³
                   </Descriptions.Item>
                   <Descriptions.Item label="总充型质量">
-                    {computeResult.intermediate.castingMassKg.toFixed(3)} kg
+                    {computeResult.intermediate.castingMassKg?.toFixed(3) ?? '-'} kg
                   </Descriptions.Item>
                   <Descriptions.Item label="die 斜率">
-                    {computeResult.intermediate.dieSlopeMPaPerLps2.toExponential(3)} MPa / (L/s)²
+                    {computeResult.intermediate.dieSlopeMPaPerLps2?.toExponential(3) ?? '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="Qmax²">
-                    {computeResult.intermediate.xMaxLps2.toFixed(0)} (L/s)²
+                    {computeResult.intermediate.xMaxLps2?.toFixed(0) ?? '-'} (L/s)²
                   </Descriptions.Item>
                   <Descriptions.Item label="Qreq²">
-                    {computeResult.intermediate.xRequiredLps2.toFixed(0)} (L/s)²
+                    {computeResult.intermediate.xRequiredLps2?.toFixed(0) ?? '-'} (L/s)²
                   </Descriptions.Item>
                 </Descriptions>
                 <Divider style={{ margin: '12px 0' }} />
@@ -282,308 +633,6 @@ export function PQ2Page() {
                 </Typography.Paragraph>
               </div>
             </div>
-          </Card>
-
-          <Card
-            className="softCard span2"
-            title="输入参数"
-            extra={<Tag color="purple">Form</Tag>}
-          >
-            <Form<PQ2Params>
-              form={form}
-              layout="vertical"
-              initialValues={initialParams}
-              onValuesChange={(_, next) => {
-                // 参数联动已在 computePQ2 中处理，这里只需保存参数
-                setSavedParams(next)
-              }}
-            >
-              <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                <div className="pill">
-                  <Typography.Text type="secondary">共享状态</Typography.Text>
-                  <div style={{ height: 8 }} />
-                  <Descriptions size="small" column={1} labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}>
-                    <Descriptions.Item label="机台">{machineName ?? '未设置'}</Descriptions.Item>
-                    <Descriptions.Item label="材料">{materialName ?? 'A380'}</Descriptions.Item>
-                  </Descriptions>
-                </div>
-
-                <div className="pill">
-                  <Form.Item label="材料" name="materialId" rules={[{ required: true }]}>
-                    <Select
-                      options={PQ2_MATERIALS.map((m) => ({ value: m.id, label: m.name }))}
-                      showSearch
-                      optionFilterProp="label"
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    label="密度（kg/m³）"
-                    name="densityKgM3"
-                    rules={[{ required: true, type: 'number', min: 1 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={1} step={10} />
-                  </Form.Item>
-                </div>
-
-                <div className="pill">
-                  <Form.Item label="输入基准" name="inputBasis" rules={[{ required: true }]}>
-                    <Select
-                      options={[
-                        { value: 'mass', label: '质量（kg）' },
-                        { value: 'volume', label: '体积（cm³）' },
-                      ]}
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    noStyle
-                    shouldUpdate={(p, n) => p.inputBasis !== n.inputBasis}
-                  >
-                    {({ getFieldValue }) => {
-                      const basis = getFieldValue('inputBasis') as PQ2Params['inputBasis']
-                      return basis === 'mass' ? (
-                        <Form.Item
-                          label="总充型质量（kg）"
-                          name="castingMassKg"
-                          rules={[{ required: true, type: 'number', min: 0.001 }]}
-                        >
-                          <InputNumber style={{ width: '100%' }} min={0} step={0.1} />
-                        </Form.Item>
-                      ) : (
-                        <Form.Item
-                          label="总充型体积（cm³）"
-                          name="castingVolumeCm3"
-                          rules={[{ required: true, type: 'number', min: 1 }]}
-                        >
-                          <InputNumber style={{ width: '100%' }} min={0} step={10} />
-                        </Form.Item>
-                      )
-                    }}
-                  </Form.Item>
-
-                  <Form.Item
-                    noStyle
-                    shouldUpdate={(p, n) =>
-                      p.castingMassKg !== n.castingMassKg ||
-                      p.castingVolumeCm3 !== n.castingVolumeCm3 ||
-                      p.inputBasis !== n.inputBasis
-                    }
-                  >
-                    {({ getFieldValue }) => {
-                      const basis = getFieldValue('inputBasis') as PQ2Params['inputBasis']
-                      const mass = Number(getFieldValue('castingMassKg') ?? 0)
-                      const vol = Number(getFieldValue('castingVolumeCm3') ?? 0)
-                      return (
-                        <Descriptions
-                          size="small"
-                          column={1}
-                          labelStyle={{ color: 'rgba(33, 23, 53, 0.56)' }}
-                        >
-                          <Descriptions.Item label={basis === 'mass' ? '联动总充型体积' : '联动总充型质量'}>
-                            {basis === 'mass' ? `${vol.toFixed(0)} cm³` : `${mass.toFixed(3)} kg`}
-                          </Descriptions.Item>
-                        </Descriptions>
-                      )
-                    }}
-                  </Form.Item>
-
-                  <Divider style={{ margin: '10px 0' }} />
-
-                  <Form.Item
-                    label="充型时间（s）"
-                    name="fillTimeS"
-                    rules={[{ required: true, type: 'number', min: 0.001 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={0} step={0.01} />
-                  </Form.Item>
-                </div>
-
-                <div className="pill">
-                  <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Typography.Text type="secondary">浇口面积使用自定义</Typography.Text>
-                    <Form.Item name="useCustomGateArea" valuePropName="checked" noStyle>
-                      <Switch />
-                    </Form.Item>
-                  </Space>
-                  <div style={{ height: 10 }} />
-
-                  <Form.Item label="浇口宽（mm）" name="gateWidthMm" rules={[{ required: true, type: 'number', min: 0.1 }]}>
-                    <InputNumber style={{ width: '100%' }} min={0} step={1} />
-                  </Form.Item>
-                  <Form.Item
-                    label="浇口厚（mm）"
-                    name="gateThicknessMm"
-                    rules={[{ required: true, type: 'number', min: 0.1 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={0} step={0.1} />
-                  </Form.Item>
-
-                  <Form.Item noStyle shouldUpdate={(p, n) => p.useCustomGateArea !== n.useCustomGateArea}>
-                    {({ getFieldValue }) => (
-                      <Form.Item
-                        label="浇口面积（mm²）"
-                        name="gateAreaMm2"
-                        rules={[{ required: true, type: 'number', min: 1 }]}
-                      >
-                        <InputNumber
-                          style={{ width: '100%' }}
-                          min={0}
-                          step={1}
-                          disabled={!getFieldValue('useCustomGateArea')}
-                        />
-                      </Form.Item>
-                    )}
-                  </Form.Item>
-
-                  <Divider style={{ margin: '10px 0' }} />
-
-                  <Form.Item
-                    label="流量系数 Cd"
-                    name="dischargeCoeff"
-                    rules={[{ required: true, type: 'number', min: 0.01, max: 1 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={0.01} max={1} step={0.01} />
-                  </Form.Item>
-
-                  <Form.Item label="其他压降（MPa）" name="extraLossMPa" rules={[{ required: true, type: 'number', min: 0 }]}>
-                    <InputNumber style={{ width: '100%' }} min={0} step={1} />
-                  </Form.Item>
-                </div>
-
-                <div className="pill">
-                  <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Typography.Text type="secondary">使用液压参数计算</Typography.Text>
-                    <Form.Item name="useHydraulicMode" valuePropName="checked" noStyle>
-                      <Switch />
-                    </Form.Item>
-                  </Space>
-                  <div style={{ height: 10 }} />
-
-                  <Form.Item noStyle shouldUpdate={(p, n) => p.useHydraulicMode !== n.useHydraulicMode}>
-                    {({ getFieldValue }) => {
-                      const useHydraulic = getFieldValue('useHydraulicMode') as boolean
-                      return useHydraulic ? (
-                        <>
-                          <Form.Item
-                            label="液压压力（MPa）"
-                            name="hydraulicPressureMPa"
-                            rules={[{ required: true, type: 'number', min: 1 }]}
-                          >
-                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
-                          </Form.Item>
-                          <Form.Item
-                            label="压射缸直径（mm）"
-                            name="hydraulicCylinderDiameterMm"
-                            rules={[{ required: true, type: 'number', min: 1 }]}
-                          >
-                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
-                          </Form.Item>
-                          <Form.Item
-                            label="冲头直径（mm）"
-                            name="plungerDiameterMm"
-                            rules={[{ required: true, type: 'number', min: 1 }]}
-                          >
-                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
-                          </Form.Item>
-                          <Form.Item noStyle shouldUpdate>
-                            {({ getFieldValue: gv }) => {
-                              const phyd = gv('hydraulicPressureMPa') as number
-                              const dhyd = gv('hydraulicCylinderDiameterMm') as number
-                              const dpt = gv('plungerDiameterMm') as number
-                              let calculatedPressure = 0
-                              if (dpt > 0) {
-                                const pmKgCm2 = (phyd * 10) * Math.pow((dhyd / 10) / (dpt / 10), 2)
-                                calculatedPressure = pmKgCm2 * 0.0980665
-                              }
-                              return (
-                                <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(139, 92, 246, 0.08)', borderRadius: 8 }}>
-                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                    计算所得机台压力: {' '}
-                                    <Typography.Text strong style={{ color: token.colorPrimary }}>
-                                      {calculatedPressure.toFixed(2)} MPa
-                                    </Typography.Text>
-                                  </Typography.Text>
-                                </div>
-                              )
-                            }}
-                          </Form.Item>
-                        </>
-                      ) : (
-                        <>
-                          <Form.Item
-                            label="最大压力（MPa）"
-                            name="machineMaxPressureMPa"
-                            rules={[{ required: true, type: 'number', min: 1 }]}
-                          >
-                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
-                          </Form.Item>
-                          <Form.Item
-                            label="冲头直径（mm）"
-                            name="plungerDiameterMm"
-                            rules={[{ required: true, type: 'number', min: 1 }]}
-                          >
-                            <InputNumber style={{ width: '100%' }} min={0} step={1} />
-                          </Form.Item>
-                        </>
-                      )
-                    }}
-                  </Form.Item>
-                  <Form.Item
-                    label="冲头最大速度（m/s）"
-                    name="plungerMaxSpeedMps"
-                    rules={[{ required: true, type: 'number', min: 0.1 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={0} step={0.1} />
-                  </Form.Item>
-                </div>
-
-                <div className="pill">
-                  <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Typography.Text type="secondary">自定义工艺窗口</Typography.Text>
-                    <Form.Item name="useCustomProcessWindow" valuePropName="checked" noStyle>
-                      <Switch />
-                    </Form.Item>
-                  </Space>
-                  <div style={{ height: 10 }} />
-
-                  <Form.Item
-                    label="最大浇口速度（m/s）"
-                    name="vGateMaxMps"
-                    rules={[{ required: true, type: 'number', min: 10 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={10} max={200} step={5} />
-                  </Form.Item>
-                  <Form.Item
-                    label="最小浇口速度（m/s）"
-                    name="vGateMinMps"
-                    rules={[{ required: true, type: 'number', min: 5 }]}
-                  >
-                    <InputNumber style={{ width: '100%' }} min={5} max={100} step={5} />
-                  </Form.Item>
-                  {!params?.useCustomProcessWindow && (
-                    <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(139, 92, 246, 0.08)', borderRadius: 8 }}>
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        使用推荐值: Vmax=60m/s, Vmin=30m/s
-                      </Typography.Text>
-                    </div>
-                  )}
-                </div>
-
-                <Button
-                  icon={<ReloadOutlined />}
-                  block
-                  onClick={() => {
-                    const material = getMaterialById(form.getFieldValue('materialId'))
-                    const reset = { ...DEFAULT_PARAMS, densityKgM3: material.densityKgM3, materialId: material.id }
-                    form.setFieldsValue(reset)
-                    setSavedParams(reset)
-                  }}
-                >
-                  恢复推荐默认值
-                </Button>
-              </Space>
-            </Form>
           </Card>
         </div>
       </div>
