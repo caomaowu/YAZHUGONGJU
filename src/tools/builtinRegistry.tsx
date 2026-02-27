@@ -1,8 +1,9 @@
-import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
 import { PQ2Page } from '../pages/PQ2Page'
+import { FillingSimulationPage } from '../pages/FillingSimulationPage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { TemplatesPage } from '../pages/TemplatesPage'
 import { MachineDatabasePage } from '../pages/MachineDatabasePage'
@@ -50,6 +51,16 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <LineChartOutlined />,
       order: 20,
       element: <PQ2Page />,
+      allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
+    },
+    {
+      id: 'filling-simulation',
+      title: '压射模拟',
+      navLabel: '压射模拟',
+      route: '/filling-simulation',
+      icon: <ThunderboltOutlined />,
+      order: 25,
+      element: <FillingSimulationPage />,
       allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
     },
     {
