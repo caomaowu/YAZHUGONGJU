@@ -13,5 +13,6 @@ export type ToolDefinition = {
   order?: number
   element: ReactNode
   allowedRoles?: Role[]
+  disabled?: boolean
 }
 

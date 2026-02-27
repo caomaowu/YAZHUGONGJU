@@ -72,7 +72,7 @@ function MainLayout() {
       : tools).filter((t) => t.id !== 'ai')
       
     return list.map((t) => {
-      const isAllowed = !t.allowedRoles || hasPermission(t.id)
+      const isAllowed = (!t.allowedRoles || hasPermission(t.id)) && !t.disabled
       const isAI = t.id === 'ai-knowledge'
       
       return { 
@@ -162,7 +162,7 @@ function MainLayout() {
             if (!tool) return
             
             // Permission check
-            if (tool.allowedRoles && !hasPermission(tool.id)) {
+            if ((tool.allowedRoles && !hasPermission(tool.id)) || tool.disabled) {
               message.info('暂未开放');
               return;
             }

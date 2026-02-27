@@ -1,4 +1,4 @@
-import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
@@ -30,6 +30,17 @@ function createBuiltinTools(): ToolDefinition[] {
       order: 15,
       element: <MachineDatabasePage />,
       allowedRoles: ['admin', 'engineer', 'viewer'],
+    },
+    {
+      id: 'project-big-data',
+      title: '项目大数据',
+      navLabel: '项目大数据',
+      route: '/big-data',
+      icon: <FundOutlined />,
+      order: 18,
+      element: <div style={{ padding: 24, fontSize: 18, fontWeight: 'bold' }}>暂未开放</div>,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
+      disabled: true,
     },
     {
       id: 'pq2',
