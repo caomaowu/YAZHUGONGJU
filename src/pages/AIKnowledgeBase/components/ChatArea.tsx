@@ -14,6 +14,16 @@ import type { Message } from '../types'
 const { TextArea } = Input
 const { Title, Text } = Typography
 
+// Preprocess LaTeX delimiters to be compatible with remark-math
+const preprocessLaTeX = (content: string) => {
+  if (typeof content !== 'string') return ''
+  return content
+    .replace(/\\\[/g, '$$$$')
+    .replace(/\\\]/g, '$$$$')
+    .replace(/\\\(/g, '$')
+    .replace(/\\\)/g, '$')
+}
+
 interface ChatAreaProps {
   messages: Message[]
   loading: boolean
@@ -130,7 +140,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       flexDirection: 'column', 
       height: '100%', 
       position: 'relative',
-      backgroundColor: token.colorBgLayout 
+      backgroundColor: token.colorBgLayout,
+      overflow: 'hidden'
     }}>
       {/* Messages Area */}
       <div 
@@ -138,6 +149,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         onScroll={handleScroll}
         style={{ 
           flex: 1, 
+          minHeight: 0,
           overflowY: 'auto', 
           padding: '16px 12px',
           display: 'flex',
@@ -259,7 +271,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         }
                       }}
                     >
-                      {msg.content || 'Thinking...'}
+                      {preprocessLaTeX(msg.content || 'Thinking...')}
                     </ReactMarkdown>
                     {loading && !msg.content && <Spin size="small" style={{ marginLeft: 8 }} />}
                   </div>
