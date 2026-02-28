@@ -31,25 +31,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.appGrid.aiKnowledgeMode {
-  grid-template-columns: 80px minmax(0, 1fr);
-}
-
-.appGrid.aiKnowledgeMode .panelInnerLeft {
-  padding: 12px 8px; /* Reduce padding for narrow sidebar */
-  align-items: center;
-}
-
-.appGrid.aiKnowledgeMode .leftHeader {
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.appGrid.aiKnowledgeMode .brand {
-  justify-content: center;
-}
-
 .panel {
   position: relative;
   border: 1px solid var(--panel-border);
@@ -364,7 +345,7 @@
 }
 
 /* Responsive Breakpoints */
-@media (max-width: 860px) {
+@media (max-width: 768px) {
   .appFrame {
     padding: 12px;
   }
@@ -378,31 +359,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .panelLeft {
+  .panelInnerLeft {
     display: none;
-  }
-
-  .span8,
-  .span4,
-  .span9,
-  .span3,
-  .span10,
-  .span2 {
-    grid-column: span 12;
-  }
-}
-
-@media (max-width: 768px) {
-  .cardGrid {
-    grid-template-columns: 1fr; /* Single column for cards on mobile */
-  }
-
-  .span8, .span4, .span9, .span3, .span10, .span2 {
-    grid-column: span 1;
-  }
-
-  .metricRow {
-    grid-template-columns: 1fr; /* Stack metrics */
   }
 }
 

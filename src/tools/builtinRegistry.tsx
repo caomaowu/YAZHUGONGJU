@@ -1,4 +1,4 @@
-import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined, ThunderboltOutlined, BookOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
@@ -9,6 +9,7 @@ import { TemplatesPage } from '../pages/TemplatesPage'
 import { MachineDatabasePage } from '../pages/MachineDatabasePage'
 import { UserManagementPage } from '../pages/UserManagementPage'
 import { AIKnowledgeBasePage } from '../pages/AIKnowledgeBase/AIKnowledgeBasePage'
+import { KnowledgeBasePage } from '../pages/KnowledgeBase/KnowledgeBasePage'
 
 function createBuiltinTools(): ToolDefinition[] {
   return [
@@ -30,6 +31,16 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <DatabaseOutlined />,
       order: 15,
       element: <MachineDatabasePage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
+    },
+    {
+      id: 'knowledge-base',
+      title: '知识库',
+      navLabel: '知识库',
+      route: '/knowledge-base',
+      icon: <BookOutlined />,
+      order: 17,
+      element: <KnowledgeBasePage />,
       allowedRoles: ['admin', 'engineer', 'viewer'],
     },
     {

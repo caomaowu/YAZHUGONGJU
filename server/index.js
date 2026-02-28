@@ -42,9 +42,18 @@ const USERS_FILE = path.join(__dirname, 'users.json');
 const ROLES_FILE = path.join(__dirname, 'roles.json');
 const CHATS_FILE = path.join(__dirname, 'chats.json');
 const BAILIAN_CONFIG_FILE = path.join(__dirname, 'bailian_config.json');
+const LIBRARY_FILE = path.join(__dirname, 'library.json');
+const LIBRARY_UPLOAD_DIR = path.join(__dirname, 'uploads', 'library');
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function safeFileExt(originalName) {
+  const ext = path.extname(String(originalName || '')).toLowerCase();
+  if (!ext || ext.length > 12) return '';
+  if (!/^\.[a-z0-9]+$/.test(ext)) return '';
+  return ext;
 }
 
 async function readJsonWithDefault(file, defaultValue) {
@@ -58,6 +67,15 @@ async function readJsonWithDefault(file, defaultValue) {
     await fs.writeJson(file, defaultValue, { spaces: 2 });
     return defaultValue;
   }
+}
+
+async function readLibrary() {
+  const value = await readJsonWithDefault(LIBRARY_FILE, []);
+  return Array.isArray(value) ? value : [];
+}
+
+async function writeLibrary(items) {
+  await fs.writeJson(LIBRARY_FILE, Array.isArray(items) ? items : [], { spaces: 2 });
 }
 
 // Ensure data file exists
@@ -120,6 +138,10 @@ if (!fs.existsSync(ROLES_FILE)) {
 if (!fs.existsSync(CHATS_FILE)) {
   fs.writeJsonSync(CHATS_FILE, [], { spaces: 2 });
 }
+if (!fs.existsSync(LIBRARY_FILE)) {
+  fs.writeJsonSync(LIBRARY_FILE, [], { spaces: 2 });
+}
+fs.ensureDirSync(LIBRARY_UPLOAD_DIR);
 
 try {
   const roles = fs.readJsonSync(ROLES_FILE);
@@ -129,6 +151,8 @@ try {
       if (!role || !Array.isArray(role.permissions)) return;
       if (!role.permissions.includes(perm)) role.permissions.push(perm);
     };
+    ensurePerm('engineer', 'knowledge-base');
+    ensurePerm('viewer', 'knowledge-base');
     fs.writeJsonSync(ROLES_FILE, roles, { spaces: 2 });
   }
 } catch {}
@@ -472,6 +496,232 @@ app.delete('/api/users/:username', authenticateToken, requireRole(['admin']), as
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+function buildContentDisposition(disposition, filename) {
+  const name = String(filename || 'file');
+  const asciiFallback = name.replace(/[^\x20-\x7E]+/g, '_');
+  return `${disposition}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+
+function normalizeBase64(input) {
+  const value = String(input || '');
+  const idx = value.indexOf('base64,');
+  return idx >= 0 ? value.slice(idx + 'base64,'.length) : value;
+}
+
+function normalizeStringArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(String).map(s => s.trim()).filter(Boolean).slice(0, 20);
+  return String(value)
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+const LIBRARY_ALLOWED_MIME_PREFIX = ['image/'];
+const LIBRARY_ALLOWED_MIME_EXACT = [
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+  'text/x-markdown'
+];
+
+function isAllowedLibraryMime(mimeType) {
+  const mt = String(mimeType || '').toLowerCase();
+  if (!mt) return false;
+  if (LIBRARY_ALLOWED_MIME_EXACT.includes(mt)) return true;
+  return LIBRARY_ALLOWED_MIME_PREFIX.some(prefix => mt.startsWith(prefix));
+}
+
+function inferLibraryType(mimeType, originalName) {
+  const mt = String(mimeType || '').toLowerCase();
+  if (mt.startsWith('image/')) return 'image';
+  if (mt === 'application/pdf') return 'pdf';
+  if (mt === 'text/markdown' || mt === 'text/x-markdown') return 'markdown';
+  if (mt.startsWith('text/')) return 'text';
+  const ext = safeFileExt(originalName);
+  if (ext === '.pdf') return 'pdf';
+  if (ext === '.md' || ext === '.markdown') return 'markdown';
+  if (ext === '.txt') return 'text';
+  if (['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(ext)) return 'image';
+  return 'file';
+}
+
+function inferMimeFromExt(originalName) {
+  const ext = safeFileExt(originalName);
+  if (ext === '.pdf') return 'application/pdf';
+  if (ext === '.md' || ext === '.markdown') return 'text/markdown';
+  if (ext === '.txt') return 'text/plain';
+  if (ext === '.png') return 'image/png';
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.webp') return 'image/webp';
+  if (ext === '.gif') return 'image/gif';
+  return 'application/octet-stream';
+}
+
+app.get('/api/library/files', authenticateToken, async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim().toLowerCase();
+    const type = String(req.query.type || '').trim().toLowerCase();
+    const category = String(req.query.category || '').trim().toLowerCase();
+    const tag = String(req.query.tag || '').trim().toLowerCase();
+
+    const items = await readLibrary();
+    const filtered = items
+      .filter((it) => {
+        if (!it) return false;
+        if (q) {
+          const hay = `${it.originalName || ''} ${it.description || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        if (type && String(it.type || '').toLowerCase() !== type) return false;
+        if (category && String(it.category || '').toLowerCase() !== category) return false;
+        if (tag) {
+          const tags = Array.isArray(it.tags) ? it.tags : [];
+          if (!tags.map(t => String(t).toLowerCase()).includes(tag)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')));
+
+    res.json(filtered);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch library files' });
+  }
+});
+
+app.post('/api/library/files', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { fileName, mimeType, base64, description, category } = req.body || {};
+    const originalName = String(fileName || '').trim();
+    const mt = String(mimeType || '').toLowerCase().trim() || inferMimeFromExt(originalName);
+
+    if (!originalName) return res.status(400).json({ error: 'Missing fileName' });
+    if (!isAllowedLibraryMime(mt)) return res.status(400).json({ error: 'Unsupported file type' });
+
+    const b64 = normalizeBase64(base64);
+    if (!b64) return res.status(400).json({ error: 'Missing base64' });
+
+    const buffer = Buffer.from(b64, 'base64');
+    const maxBytes = 20 * 1024 * 1024;
+    if (!buffer.length) return res.status(400).json({ error: 'Empty file' });
+    if (buffer.length > maxBytes) return res.status(413).json({ error: 'File too large' });
+
+    const id = randomUUID();
+    const ext = safeFileExt(originalName);
+    const storedName = `${id}${ext}`;
+    const storedPath = path.join(LIBRARY_UPLOAD_DIR, storedName);
+    await fs.writeFile(storedPath, buffer);
+
+    const item = {
+      id,
+      originalName,
+      storedName,
+      mimeType: mt,
+      type: inferLibraryType(mt, originalName),
+      sizeBytes: buffer.length,
+      uploadedAt: nowIso(),
+      uploadedBy: req.user?.username || 'unknown',
+      description: description === undefined ? '' : String(description).slice(0, 500),
+      category: category === undefined ? '' : String(category).slice(0, 80),
+      tags: normalizeStringArray(req.body?.tags)
+    };
+
+    const items = await readLibrary();
+    items.unshift(item);
+    await writeLibrary(items);
+
+    res.json(item);
+  } catch {
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+async function findLibraryItemOr404(req, res) {
+  const id = String(req.params.id || '').trim();
+  if (!id) return { ok: false };
+  const items = await readLibrary();
+  const item = items.find((it) => it && it.id === id);
+  if (!item) {
+    res.status(404).json({ error: 'File not found' });
+    return { ok: false };
+  }
+  return { ok: true, item, items };
+}
+
+app.get('/api/library/files/:id/preview', authenticateToken, async (req, res) => {
+  try {
+    const found = await findLibraryItemOr404(req, res);
+    if (!found.ok) return;
+    const { item } = found;
+    const filePath = path.join(LIBRARY_UPLOAD_DIR, item.storedName);
+    if (!(await fs.pathExists(filePath))) return res.status(404).json({ error: 'File not found' });
+
+    res.setHeader('Content-Type', item.mimeType || inferMimeFromExt(item.originalName));
+    res.setHeader('Content-Disposition', buildContentDisposition('inline', item.originalName));
+    fs.createReadStream(filePath).pipe(res);
+  } catch {
+    res.status(500).json({ error: 'Failed to preview file' });
+  }
+});
+
+app.get('/api/library/files/:id/download', authenticateToken, async (req, res) => {
+  try {
+    const found = await findLibraryItemOr404(req, res);
+    if (!found.ok) return;
+    const { item } = found;
+    const filePath = path.join(LIBRARY_UPLOAD_DIR, item.storedName);
+    if (!(await fs.pathExists(filePath))) return res.status(404).json({ error: 'File not found' });
+
+    res.setHeader('Content-Type', item.mimeType || inferMimeFromExt(item.originalName));
+    res.setHeader('Content-Disposition', buildContentDisposition('attachment', item.originalName));
+    fs.createReadStream(filePath).pipe(res);
+  } catch {
+    res.status(500).json({ error: 'Failed to download file' });
+  }
+});
+
+app.patch('/api/library/files/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const found = await findLibraryItemOr404(req, res);
+    if (!found.ok) return;
+    const { item, items } = found;
+
+    const next = { ...item };
+    if (req.body?.originalName !== undefined) next.originalName = String(req.body.originalName).trim().slice(0, 200);
+    if (req.body?.description !== undefined) next.description = String(req.body.description).slice(0, 500);
+    if (req.body?.category !== undefined) next.category = String(req.body.category).slice(0, 80);
+    if (req.body?.tags !== undefined) next.tags = normalizeStringArray(req.body.tags);
+
+    if (!next.originalName) return res.status(400).json({ error: 'Invalid originalName' });
+
+    const idx = items.findIndex((it) => it && it.id === item.id);
+    if (idx < 0) return res.status(404).json({ error: 'File not found' });
+    items[idx] = next;
+    await writeLibrary(items);
+    res.json(next);
+  } catch {
+    res.status(500).json({ error: 'Failed to update file metadata' });
+  }
+});
+
+app.delete('/api/library/files/:id', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const found = await findLibraryItemOr404(req, res);
+    if (!found.ok) return;
+    const { item, items } = found;
+
+    const filePath = path.join(LIBRARY_UPLOAD_DIR, item.storedName);
+    await fs.remove(filePath);
+
+    const next = items.filter((it) => it && it.id !== item.id);
+    await writeLibrary(next);
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to delete file' });
   }
 });
 

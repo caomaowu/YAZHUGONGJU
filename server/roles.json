@@ -17,7 +17,8 @@
       "dashboard",
       "machines",
       "templates",
-      "settings"
+      "settings",
+      "knowledge-base"
     ],
     "canEdit": true,
     "canDelete": false
@@ -41,7 +42,8 @@
       "machines",
       "pq2",
       "templates",
-      "settings"
+      "settings",
+      "knowledge-base"
     ],
     "canEdit": false,
     "canDelete": false

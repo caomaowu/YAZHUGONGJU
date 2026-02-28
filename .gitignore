@@ -25,3 +25,5 @@ dist-ssr
 
 
 server/chats.json
+server/uploads
+
