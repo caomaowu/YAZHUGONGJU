@@ -56,8 +56,6 @@ const DEFAULT_PARAMS: PQ2Params = {
 
 export function PQ2Page() {
   const { token } = theme.useToken()
-  const [machineName] = useSharedValue<string>('global', 'machineName', '未设置')
-  const [materialName] = useSharedValue<string>('global', 'materialName', 'A380')
   const [savedParams, setSavedParams] = useSharedValue<PQ2Params>('pq2', 'params', DEFAULT_PARAMS)
   const [activeTab, setActiveTab] = useState('machine')
 

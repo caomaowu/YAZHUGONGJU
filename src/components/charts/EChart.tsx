@@ -42,67 +42,72 @@ export function EChart({
   lazyUpdate,
   onChartReady,
 }: EChartProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const chartRef = useRef<echarts.ECharts | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const chartInstanceRef = useRef<echarts.ECharts | null>(null)
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
-    chartRef.current?.dispose()
-    chartRef.current = echarts.init(container, theme, { renderer })
-    onChartReady?.(chartRef.current)
+    // 初始化图表
+    const chart = echarts.init(container, theme, { renderer })
+    chartInstanceRef.current = chart
 
-    return () => {
-      chartRef.current?.dispose()
-      chartRef.current = null
-    }
-  }, [onChartReady, renderer, theme])
-
-  useEffect(() => {
-    const chart = chartRef.current
-    if (!chart) return
-
-    chart.setOption(option, { notMerge, lazyUpdate })
-  }, [lazyUpdate, notMerge, option])
-
-  useEffect(() => {
-    const chart = chartRef.current
-    if (!chart) return
-
-    if (loading) chart.showLoading('default', { color: '#8B5CF6', lineWidth: 2 })
-    else chart.hideLoading()
-  }, [loading])
-
-  useEffect(() => {
-    const chart = chartRef.current
-    if (!chart) return
-
-    const ro = new ResizeObserver(() => {
+    // 监听容器大小变化
+    const resizeObserver = new ResizeObserver(() => {
       chart.resize()
     })
-
-    if (containerRef.current) ro.observe(containerRef.current)
-    return () => ro.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const chart = chartRef.current
-    if (!chart) return
-
-    const entries = Object.entries(events ?? {})
-    for (const [eventName, handler] of entries) {
-      if (!handler) continue
-      chart.on(eventName as EChartEventName, (...args: unknown[]) => handler(args[0], chart))
-    }
+    resizeObserver.observe(container)
 
     return () => {
-      for (const [eventName, handler] of entries) {
-        if (!handler) continue
-        chart.off(eventName as EChartEventName)
-      }
+      resizeObserver.disconnect()
+      chart.dispose()
+      chartInstanceRef.current = null
+    }
+  }, [theme, renderer])
+
+  useEffect(() => {
+    const chart = chartInstanceRef.current
+    if (!chart || !events) return
+
+    const handlers = (Object.entries(events) as [EChartEventName, NonNullable<EChartEvents[EChartEventName]>][])
+      .filter(([, handler]) => handler)
+      .map(([eventName, handler]) => {
+        const wrapped = (...args: unknown[]) => handler(args[0], chart)
+        chart.on(eventName, wrapped)
+        return { eventName, wrapped }
+      })
+
+    return () => {
+      handlers.forEach(({ eventName, wrapped }) => chart.off(eventName, wrapped))
     }
   }, [events])
 
-  return <div ref={containerRef} className={className} style={style} />
+  useEffect(() => {
+    const chart = chartInstanceRef.current
+    if (!chart) return
+    onChartReady?.(chart)
+  }, [onChartReady, theme, renderer])
+
+  // 监听配置变化并更新
+  useEffect(() => {
+    const chart = chartInstanceRef.current
+    if (chart) {
+      chart.setOption(option, notMerge, lazyUpdate)
+    }
+  }, [option, notMerge, lazyUpdate])
+
+  // 监听 loading 状态
+  useEffect(() => {
+    const chart = chartInstanceRef.current
+    if (chart) {
+      if (loading) {
+        chart.showLoading('default', { color: '#8B5CF6', lineWidth: 2 })
+      } else {
+        chart.hideLoading()
+      }
+    }
+  }, [loading])
+
+  return <div ref={containerRef} className={className} style={{ width: '100%', height: '100%', ...style }} />
 }

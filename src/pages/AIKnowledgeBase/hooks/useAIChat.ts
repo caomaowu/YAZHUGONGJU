@@ -1,6 +1,5 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import OpenAI from 'openai'
 import { DEFAULT_SETTINGS } from '../types'
 import type { ChatSession, Message, AISettings } from '../types'
 
@@ -102,8 +101,6 @@ export const useAIChat = () => {
 
     // Update state with user message
     // Note: We need to use functional update to get latest sessions
-    let currentSession: ChatSession | undefined;
-    
     setSessions(prev => {
         const updated = prev.map(session => {
           if (session.id === sessionId) {
@@ -113,7 +110,6 @@ export const useAIChat = () => {
               updatedAt: Date.now(),
               title: session.messages.length === 0 ? content.slice(0, 20) : session.title
             }
-            currentSession = updatedSession;
             saveSessionToServer(updatedSession)
             return updatedSession
           }
@@ -256,8 +252,8 @@ export const useAIChat = () => {
                   }))
               }
               if (data.error) throw new Error(data.error);
-            } catch (e) {
-              // Ignore parse errors
+            } catch (error) {
+              console.error('解析响应失败', error)
             }
           }
         }
@@ -290,12 +286,12 @@ export const useAIChat = () => {
 
       saveSessionToServer(finalSession)
 
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.log('Request aborted')
       } else {
         console.error('AI Error:', error)
-        let errorMessage = error.message || '未知错误'
+        let errorMessage = error instanceof Error ? error.message : '未知错误'
         
         // Enhance connection error message
         if (errorMessage.includes('Connection error') || errorMessage.includes('Failed to fetch')) {

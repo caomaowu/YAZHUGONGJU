@@ -1,41 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 
 interface SparkleProps {
   active: boolean;
 }
 
 export const SparkleEffect: React.FC<SparkleProps> = ({ active }) => {
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number; size: number; color: string; delay: number }[]>([]);
-
-  useEffect(() => {
-    if (active) {
-      // Create explosion particles
-      const newParticles = Array.from({ length: 60 }).map((_, i) => ({
-        id: Date.now() + i, // Use timestamp to ensure unique keys for re-renders
-        // Start from center
-        x: 50, 
-        y: 50,
-        // Larger movement direction to cover more screen
-        dx: (Math.random() - 0.5) * 800,
-        dy: (Math.random() - 0.5) * 800,
-        size: Math.random() * 6 + 3,
-        color: ['#f59e0b', '#fbbf24', '#fcd34d', '#ffffff'][Math.floor(Math.random() * 4)],
-        delay: Math.random() * 0.2
-      }));
-      // @ts-ignore
-      setParticles(newParticles);
-
-      // Cleanup after animation
-      const timer = setTimeout(() => {
-        // @ts-ignore
-        setParticles([]);
-      }, 2000);
-      return () => clearTimeout(timer);
-    } else {
-       // Reset particles when inactive to allow re-triggering
-       // @ts-ignore
-       setParticles([]);
-    }
+  const particles = useMemo<SparkleParticle[]>(() => {
+    if (!active) return [];
+    const colors = ['#f59e0b', '#fbbf24', '#fcd34d', '#ffffff'];
+    const count = 60;
+    return Array.from({ length: count }, (_, i) => {
+      const angle = (i / count) * Math.PI * 2;
+      const radius = 200 + (i % 6) * 30;
+      return {
+        id: i,
+        dx: Math.cos(angle) * radius,
+        dy: Math.sin(angle) * radius,
+        size: 3 + (i % 4),
+        color: colors[i % colors.length],
+        delay: (i % 10) * 0.02
+      };
+    });
   }, [active]);
 
   if (!active && particles.length === 0) return null;
@@ -48,24 +33,21 @@ export const SparkleEffect: React.FC<SparkleProps> = ({ active }) => {
       zIndex: 9999,
       overflow: 'hidden'
     }}>
-      {/* @ts-ignore */}
       {particles.map((p) => (
         <div
           key={p.id}
           className="sparkle-particle"
-          style={{
+          style={({
             left: '50%',
             top: '50%',
             width: p.size,
             height: p.size,
             backgroundColor: p.color,
             boxShadow: `0 0 ${p.size * 2}px ${p.color}`,
-            // @ts-ignore
             '--tx': `${p.dx}px`,
-            // @ts-ignore
             '--ty': `${p.dy}px`,
             animationDelay: `${p.delay}s`
-          }}
+          } as SparkleStyle)}
         />
       ))}
       <style>{`
@@ -92,4 +74,18 @@ export const SparkleEffect: React.FC<SparkleProps> = ({ active }) => {
       `}</style>
     </div>
   );
+};
+
+type SparkleParticle = {
+  id: number;
+  dx: number;
+  dy: number;
+  size: number;
+  color: string;
+  delay: number;
+};
+
+type SparkleStyle = React.CSSProperties & {
+  '--tx'?: string;
+  '--ty'?: string;
 };

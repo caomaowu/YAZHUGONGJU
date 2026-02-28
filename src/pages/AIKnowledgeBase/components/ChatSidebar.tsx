@@ -1,6 +1,6 @@
 
 import React from 'react'
-import { Button, List, Typography, Space, Tooltip, theme } from 'antd'
+import { Button, List, Typography, theme } from 'antd'
 import { PlusOutlined, DeleteOutlined, MessageOutlined, ClearOutlined } from '@ant-design/icons'
 import type { ChatSession } from '../types'
 

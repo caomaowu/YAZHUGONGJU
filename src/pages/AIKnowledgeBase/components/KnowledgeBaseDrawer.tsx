@@ -1,16 +1,23 @@
-import React, { useRef } from 'react';
-import { Drawer, Button, Table, Upload, Space, Tag, message } from 'antd';
+import React from 'react';
+import { Drawer, Button, Table, Upload, Space, Tag } from 'antd';
 import { UploadOutlined, FileTextOutlined, ReloadOutlined } from '@ant-design/icons';
-import { useBailian } from '../hooks/useBailian';
+import type { BailianFile } from '../hooks/useBailian';
 
 interface KnowledgeBaseDrawerProps {
   visible: boolean;
   onClose: () => void;
-  files: any[]; // BailianFile[]
+  files: BailianFileRecord[];
   loading: boolean;
   onUpload: (file: File) => Promise<void>;
   onRefresh: () => void;
 }
+
+type BailianFileRecord = BailianFile & {
+  FileName?: string;
+  FileId?: string;
+  SizeInBytes?: number;
+  Status?: string;
+};
 
 export const KnowledgeBaseDrawer: React.FC<KnowledgeBaseDrawerProps> = ({ 
   visible, 
@@ -39,7 +46,7 @@ export const KnowledgeBaseDrawer: React.FC<KnowledgeBaseDrawerProps> = ({
       // Let's check typical Alibaba Cloud SDK response. It's often PascalCase in API but camelCase in SDK.
       // I'll check response key in render or try both.
       key: 'fileName',
-      render: (text: string, record: any) => (
+      render: (_text: string, record: BailianFileRecord) => (
         <Space>
           <FileTextOutlined />
           {record.fileName || record.FileName}
@@ -50,7 +57,7 @@ export const KnowledgeBaseDrawer: React.FC<KnowledgeBaseDrawerProps> = ({
       title: '状态',
       dataIndex: 'Status',
       key: 'status',
-      render: (status: string, record: any) => {
+      render: (status: string, record: BailianFileRecord) => {
         const s = status || record.status;
         let color = 'default';
         let text = s;
@@ -71,7 +78,7 @@ export const KnowledgeBaseDrawer: React.FC<KnowledgeBaseDrawerProps> = ({
         title: '大小',
         dataIndex: 'SizeInBytes',
         key: 'size',
-        render: (size: number, record: any) => {
+        render: (size: number, record: BailianFileRecord) => {
             const s = size || record.sizeInBytes;
             return (s / 1024).toFixed(2) + ' KB';
         }

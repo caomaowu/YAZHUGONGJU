@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react'
-import { Layout, Button, Tooltip, theme, Switch, Space } from 'antd'
+import { Layout, Button, theme, Switch } from 'antd'
 import { SettingOutlined, MenuFoldOutlined, MenuUnfoldOutlined, CloudServerOutlined, FileTextOutlined } from '@ant-design/icons'
 import { ChatSidebar } from './components/ChatSidebar'
 import { ChatArea } from './components/ChatArea'

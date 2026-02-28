@@ -110,8 +110,9 @@ export const useBailian = () => {
         throw new Error('Failed to read file');
       };
 
-    } catch (error: any) {
-      message.error(`上传失败: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '上传失败';
+      message.error(`上传失败: ${errorMessage}`);
     } finally {
       setUploading(false);
     }

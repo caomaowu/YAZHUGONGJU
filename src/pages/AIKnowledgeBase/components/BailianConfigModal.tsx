@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Input, Button, message } from 'antd';
-import { useBailian } from '../hooks/useBailian';
+import { Modal, Form, Input } from 'antd';
+import type { BailianConfig } from '../hooks/useBailian';
 
 interface BailianConfigModalProps {
   visible: boolean;
   onClose: () => void;
-  config: any;
-  onSave: (config: any) => void;
+  config: BailianConfig;
+  onSave: (config: BailianConfig) => void;
 }
 
 export const BailianConfigModal: React.FC<BailianConfigModalProps> = ({ visible, onClose, config, onSave }) => {

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react'
-import { Modal, Form, Input, Select, Slider, Typography, Divider, message, Button, Space, Card, Row, Col, Popconfirm } from 'antd'
-import { PlusOutlined, DeleteOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons'
+import { Modal, Form, Input, Slider, Typography, Divider, message, Button, Space, Popconfirm } from 'antd'
+import { PlusOutlined, DeleteOutlined, EditOutlined, SaveOutlined } from '@ant-design/icons'
 import type { AISettings, AIProviderConfig } from '../types'
 
 const { Text, Title } = Typography
@@ -24,12 +24,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editingProviderId, setEditingProviderId] = useState<string | null>(null)
   const [newProviderName, setNewProviderName] = useState('')
 
-  useEffect(() => {
-    if (visible) {
-      // Deep copy settings to local state to avoid mutating props directly
+  const handleAfterOpenChange = (open: boolean) => {
+    if (open) {
       setLocalSettings(JSON.parse(JSON.stringify(settings)))
     }
-  }, [visible, settings])
+  }
 
   // Sync form with current provider data whenever currentProviderId changes
   useEffect(() => {
@@ -164,8 +163,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       onSave(finalSettings)
       message.success('设置已保存')
       onClose()
-    } catch (error) {
-      // Validation failed
+    } catch {
+      message.error('保存失败')
     }
   }
 
@@ -175,6 +174,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       open={visible}
       onOk={handleOk}
       onCancel={onClose}
+      afterOpenChange={handleAfterOpenChange}
       width={700}
       okText="保存全部"
       cancelText="取消"

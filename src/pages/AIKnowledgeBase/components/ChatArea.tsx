@@ -1,8 +1,8 @@
 
-import React, { useRef, useEffect, useState } from 'react'
-import { Input, Button, Avatar, Spin, Typography, Space, Tooltip, message, theme } from 'antd'
+import React, { useRef, useEffect, useState, useMemo } from 'react'
+import { Input, Button, Avatar, Typography, Tooltip, theme } from 'antd'
 import { SendOutlined, UserOutlined, RobotOutlined, CopyOutlined, CheckOutlined, BulbOutlined } from '@ant-design/icons'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import remarkGfm from 'remark-gfm'
@@ -31,7 +31,12 @@ interface ChatAreaProps {
   onStopGeneration: () => void
 }
 
-const CodeBlock = ({ language, children }: any) => {
+type CodeBlockProps = {
+  language?: string
+  children: React.ReactNode
+}
+
+const CodeBlock = ({ language, children }: CodeBlockProps) => {
   const [copied, setCopied] = useState(false)
   const { token } = theme.useToken()
 
@@ -120,7 +125,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const shouldAutoScrollRef = useRef(true)
   const prevMessagesLength = useRef(0)
   const isUserScrolling = useRef(false)
 
@@ -138,10 +143,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     // If user scrolls up, disable auto-scroll
     if (!isAtBottom) {
       isUserScrolling.current = true
-      setShouldAutoScroll(false)
+      shouldAutoScrollRef.current = false
     } else {
       isUserScrolling.current = false
-      setShouldAutoScroll(true)
+      shouldAutoScrollRef.current = true
     }
   }
 
@@ -152,18 +157,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     const isUserMessage = lastMessage?.role === 'user'
 
     if (isNewMessage) {
-      if (isUserMessage || shouldAutoScroll) {
+      if (isUserMessage || shouldAutoScrollRef.current) {
         // Force scroll for user messages or if already at bottom
         scrollToBottom('smooth')
-        setShouldAutoScroll(true)
+        shouldAutoScrollRef.current = true
         isUserScrolling.current = false
       }
       prevMessagesLength.current = messages.length
-    } else if (loading && shouldAutoScroll) {
+    } else if (loading && shouldAutoScrollRef.current) {
       // Smooth scroll during streaming if user hasn't scrolled up
       scrollToBottom('auto')
     }
-  }, [messages, loading, shouldAutoScroll])
+  }, [messages, loading])
 
   const handleSend = () => {
     if (!input.trim()) return
@@ -171,7 +176,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     setInput('')
     // Reset scroll state
     isUserScrolling.current = false
-    setShouldAutoScroll(true)
+    shouldAutoScrollRef.current = true
     setTimeout(() => scrollToBottom(), 100)
   }
 
@@ -189,6 +194,30 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     '解释一下 PQ² 图的原理和应用',
     '写一段计算压铸机锁模力的 Python 代码',
   ]
+
+  const markdownComponents = useMemo<Components>(() => ({
+    code({ className, children, ...props }) {
+      const match = /language-(\w+)/.exec(className || '')
+      return match ? (
+        <CodeBlock language={match[1]}>{children}</CodeBlock>
+      ) : (
+        <code
+          className={className}
+          {...props}
+          style={{
+            backgroundColor: token.colorFillTertiary,
+            padding: '2px 6px',
+            borderRadius: 4,
+            fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
+            fontSize: '0.9em',
+            color: token.colorText,
+          }}
+        >
+          {children}
+        </code>
+      )
+    },
+  }), [token.colorFillTertiary, token.colorText])
 
   return (
     <div style={{ 
@@ -361,25 +390,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}
                       rehypePlugins={[rehypeKatex]}
-                      components={{
-                        code({ node, inline, className, children, ...props }: any) {
-                          const match = /language-(\w+)/.exec(className || '')
-                          return !inline && match ? (
-                            <CodeBlock language={match[1]}>{children}</CodeBlock>
-                          ) : (
-                            <code className={className} {...props} style={{ 
-                              backgroundColor: token.colorFillTertiary, 
-                              padding: '2px 6px', 
-                              borderRadius: 4,
-                              fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace',
-                              fontSize: '0.9em',
-                              color: token.colorText
-                            }}>
-                              {children}
-                            </code>
-                          )
-                        }
-                      }}
+                      components={markdownComponents}
                     >
                       {preprocessLaTeX(msg.content || '')}
                     </ReactMarkdown>
