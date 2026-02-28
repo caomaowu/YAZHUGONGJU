@@ -76,7 +76,7 @@ export const MachineDatabasePage: React.FC = () => {
     });
   };
 
-  const handleRenameLocation = (oldName: string, newName: string) => {
+  const handleRenameLocation = async (oldName: string, newName: string) => {
     // Update all machines that are in the old location
     const updatedMachines = machines.map(m => {
       if (m.location === oldName) {
@@ -87,6 +87,7 @@ export const MachineDatabasePage: React.FC = () => {
 
     if (JSON.stringify(updatedMachines) !== JSON.stringify(machines)) {
       setMachines(updatedMachines);
+      await persistMachines(updatedMachines);
       message.info(`已将 ${oldName} 的设备迁移至 ${newName}`);
     }
   };
@@ -98,16 +99,16 @@ export const MachineDatabasePage: React.FC = () => {
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setMachines(data);
+          setIsLoaded(true);
         } else {
           setMachines(mockMachines); // Fallback to mock if empty
+          setIsLoaded(true);
         }
       })
       .catch(err => {
         console.error('Failed to load machines from API', err);
-        setMachines(mockMachines); // Fallback on error
-      })
-      .finally(() => {
-        setIsLoaded(true);
+        // Do not set isLoaded to true on error to prevent accidental overwrite
+        message.error('无法加载设备数据，请检查网络连接');
       });
   }, []);
 
@@ -131,21 +132,22 @@ export const MachineDatabasePage: React.FC = () => {
     }
   }, [machineModels, machines.length]);
 
-  // Persist machines to API whenever they change
-  useEffect(() => {
-    if (!isLoaded) return; // Don't save before initial load is complete
-
-    fetch('/api/machines', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(machines),
-    })
-    .then(res => res.json())
-    .catch(err => {
+  // Helper to persist machines
+  const persistMachines = async (newMachines: DieCastingMachine[]) => {
+    try {
+      const response = await fetch('/api/machines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMachines),
+      });
+      if (!response.ok) throw new Error('Failed to save');
+      return true;
+    } catch (err) {
       console.error('Failed to save machines to API', err);
-      message.error('保存到本地文件失败，请检查后台服务');
-    });
-  }, [machines, isLoaded]);
+      message.error('保存数据失败，请检查后台服务');
+      return false;
+    }
+  };
 
   // Extract unique locations for filter
   const locationOptions = useMemo(() => {
@@ -166,58 +168,76 @@ export const MachineDatabasePage: React.FC = () => {
     });
   }, [query, locationFilter, machines]);
 
-  const handleMachineUpdate = (updatedMachine: DieCastingMachine) => {
-    setMachines(prev => prev.map(m => m.id === updatedMachine.id ? updatedMachine : m));
+  const handleMachineUpdate = async (updatedMachine: DieCastingMachine) => {
+    const newMachines = machines.map(m => m.id === updatedMachine.id ? updatedMachine : m);
+    setMachines(newMachines);
     setSelectedMachine(updatedMachine); // Update selected machine to reflect changes immediately
+    
+    await persistMachines(newMachines);
     message.success('设备信息已更新');
   };
 
-  const handleAddMachine = (modelName: string) => {
-    const originalModel = machineModels.find(m => m["型号"] === modelName);
-    
-    // Deep clone the model data to ensure the new machine instance is independent
-    // and modifications to it won't affect the global model template or other machines.
-    const selectedModel = originalModel ? JSON.parse(JSON.stringify(originalModel)) : undefined;
-    
-    // Parse specs from model
-    let tieBarH = 0;
-    let tieBarV = 0;
-    if (selectedModel && selectedModel["容模尺寸_mm"]) {
-      const dims = selectedModel["容模尺寸_mm"].split(/×|x/);
-      if (dims.length === 2) {
-        tieBarH = parseFloat(dims[0]);
-        tieBarV = parseFloat(dims[1]);
-      }
-    }
+  const handleAddMachine = async (items: { model: string; name: string }[]) => {
+    const newMachinesToAdd: DieCastingMachine[] = [];
 
-    const newMachine: DieCastingMachine = {
-      id: Date.now().toString(),
-      name: `${modelName} - 新设备`, // Auto name suggestion
-      brand: '力劲 (LK)', // Default from JSON source
-      model: modelName,
-      tonnage: selectedModel ? (selectedModel["锁模力_KN"] ? Math.round(selectedModel["锁模力_KN"] / 10) : 0) : 0,
-      location: availableLocations[0] || '未分配',
-      status: 'offline',
-      specs: {
-        clampingForce: selectedModel ? selectedModel["锁模力_KN"] : 0,
-        tieBarSpacing: [tieBarH, tieBarV],
-        dieHeightMin: selectedModel?.["模具厚度_mm"]?.["最小"] || 0,
-        dieHeightMax: selectedModel?.["模具厚度_mm"]?.["最大"] || 0,
-        ejectionStroke: selectedModel?.["顶出行程_mm"] || 0,
-        injectionRate: undefined
-      },
-      rawSpecs: selectedModel
-    };
+    items.forEach((item, index) => {
+      const originalModel = machineModels.find(m => m["型号"] === item.model);
+      
+      // Deep clone the model data
+      const selectedModel = originalModel ? JSON.parse(JSON.stringify(originalModel)) : undefined;
+      
+      // Parse specs from model
+      let tieBarH = 0;
+      let tieBarV = 0;
+      if (selectedModel && selectedModel["容模尺寸_mm"]) {
+        const dims = selectedModel["容模尺寸_mm"].split(/×|x/);
+        if (dims.length === 2) {
+          tieBarH = parseFloat(dims[0]);
+          tieBarV = parseFloat(dims[1]);
+        }
+      }
+
+      const newMachine: DieCastingMachine = {
+        id: `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 5)}`,
+        name: item.name,
+        brand: '力劲 (LK)', // Default from JSON source
+        model: item.model,
+        tonnage: selectedModel ? (selectedModel["锁模力_KN"] ? Math.round(selectedModel["锁模力_KN"] / 10) : 0) : 0,
+        location: availableLocations[0] || '未分配',
+        status: 'offline',
+        specs: {
+          clampingForce: selectedModel ? selectedModel["锁模力_KN"] : 0,
+          tieBarSpacing: [tieBarH, tieBarV],
+          dieHeightMin: selectedModel?.["模具厚度_mm"]?.["最小"] || 0,
+          dieHeightMax: selectedModel?.["模具厚度_mm"]?.["最大"] || 0,
+          ejectionStroke: selectedModel?.["顶出行程_mm"] || 0,
+          injectionRate: undefined
+        },
+        rawSpecs: selectedModel
+      };
+      
+      newMachinesToAdd.push(newMachine);
+    });
     
-    setMachines(prev => [...prev, newMachine]);
-    setSelectedMachine(newMachine);
+    const updatedMachines = [...machines, ...newMachinesToAdd];
+    setMachines(updatedMachines);
+    
+    if (newMachinesToAdd.length === 1) {
+      setSelectedMachine(newMachinesToAdd[0]);
+    }
+    
+    await persistMachines(updatedMachines);
+    
     setIsAddModalOpen(false); // Close modal
-    message.success('设备创建成功');
+    message.success(`成功添加 ${newMachinesToAdd.length} 台设备`);
   };
 
-  const handleDeleteMachine = (id: string) => {
-    setMachines(prev => prev.filter(m => m.id !== id));
+  const handleDeleteMachine = async (id: string) => {
+    const newMachines = machines.filter(m => m.id !== id);
+    setMachines(newMachines);
     setSelectedMachine(null);
+    
+    await persistMachines(newMachines);
     message.success('设备已删除');
   };
 
@@ -233,11 +253,25 @@ export const MachineDatabasePage: React.FC = () => {
       okText: '删除',
       okType: 'danger',
       cancelText: '取消',
-      onOk: () => {
-        setMachines(prev => prev.filter(m => !selectedIds.has(m.id)));
-        setSelectedIds(new Set());
-        setIsBatchMode(false);
-        message.success('设备已批量删除');
+      onOk: async () => {
+        try {
+          const newMachines = machines.filter(m => !selectedIds.has(m.id));
+          
+          // Explicitly call API to ensure persistence
+          const success = await persistMachines(newMachines);
+          
+          if (!success) {
+            throw new Error('Failed to delete machines');
+          }
+          
+          setMachines(newMachines);
+          setSelectedIds(new Set());
+          setIsBatchMode(false);
+          message.success('设备已批量删除');
+        } catch (error) {
+          console.error('Batch delete failed', error);
+          // Error message already shown in persistMachines
+        }
       },
     });
   };
@@ -250,17 +284,22 @@ export const MachineDatabasePage: React.FC = () => {
     setIsMoveModalOpen(true);
   };
 
-  const confirmBatchMove = () => {
+  const confirmBatchMove = async () => {
     if (!targetLocation) {
       message.error('请选择目标位置');
       return;
     }
-    setMachines(prev => prev.map(m => {
+    
+    const newMachines = machines.map(m => {
       if (selectedIds.has(m.id)) {
         return { ...m, location: targetLocation };
       }
       return m;
-    }));
+    });
+    
+    setMachines(newMachines);
+    await persistMachines(newMachines);
+    
     setSelectedIds(new Set());
     setIsBatchMode(false);
     setIsMoveModalOpen(false);
