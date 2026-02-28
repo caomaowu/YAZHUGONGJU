@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Layout, Input, Segmented, Row, Col, Typography, Button, theme as antTheme, message, Space, Checkbox, Modal, Select } from 'antd';
+import { Layout, Input, Segmented, Row, Col, Typography, Button, theme as antTheme, message, Space, Modal, Select } from 'antd';
 import { SearchOutlined, AppstoreOutlined, EnvironmentOutlined, PlusOutlined, SettingOutlined, DeleteOutlined, FolderOpenOutlined, CloseOutlined, CheckSquareOutlined } from '@ant-design/icons';
 import { MachineCard } from '../components/machine/MachineCard';
 import { MachineDetailDrawer } from '../components/machine/MachineDetailDrawer';
@@ -34,7 +34,6 @@ export const MachineDatabasePage: React.FC = () => {
   
   // State to hold machines
   const [machines, setMachines] = useState<DieCastingMachine[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   // State for locations and machine models
   const [availableLocations, setAvailableLocations] = useState<string[]>([]);
@@ -97,17 +96,14 @@ export const MachineDatabasePage: React.FC = () => {
     fetch('/api/machines')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setMachines(data);
-          setIsLoaded(true);
-        } else {
-          setMachines(mockMachines); // Fallback to mock if empty
-          setIsLoaded(true);
+          return;
         }
+        setMachines(mockMachines);
       })
       .catch(err => {
         console.error('Failed to load machines from API', err);
-        // Do not set isLoaded to true on error to prevent accidental overwrite
         message.error('无法加载设备数据，请检查网络连接');
       });
   }, []);

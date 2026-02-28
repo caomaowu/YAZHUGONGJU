@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Modal, Input, List, Button, Tag, Typography, Empty, Card, Row, Col, InputNumber, Divider, Space, Form, Tooltip } from 'antd';
-import { SearchOutlined, CheckCircleFilled, PlusOutlined, DeleteOutlined, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import React, { useState, useMemo } from 'react';
+import { Modal, Input, List, Button, Tag, Typography, Empty, Card, Row, Col, InputNumber, Divider, Form, Tooltip } from 'antd';
+import { SearchOutlined, CheckCircleFilled, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { MachineModelSpecs } from '../../types/machine';
 
 const { Text, Title } = Typography;
@@ -31,22 +31,22 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   });
   const [generatedNames, setGeneratedNames] = useState<string[]>([]);
 
-  // Initialize generated names when model changes
-  useEffect(() => {
-    if (selectedModel) {
-      // Default: 1 machine
+  const handleSelectModel = (model: string | null) => {
+    setSelectedModel(model);
+    if (model) {
       setCount(1);
       setNamingConfig({
-        prefix: `${selectedModel}-`,
+        prefix: `${model}-`,
         start: 1,
         padding: 0,
         suffix: '#',
       });
-      setGeneratedNames([`${selectedModel} - 新设备`]);
-    } else {
-      setGeneratedNames([]);
+      setGeneratedNames([`${model} - 新设备`]);
+      return;
     }
-  }, [selectedModel]);
+    setCount(1);
+    setGeneratedNames([]);
+  };
 
   // Handle count change
   const handleCountChange = (value: number | null) => {
@@ -97,10 +97,8 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
       }));
       onCreate(machines);
       // Reset state
-      setSelectedModel(null);
+      handleSelectModel(null);
       setSearchQuery('');
-      setCount(1);
-      setGeneratedNames([]);
     }
   };
 
@@ -157,7 +155,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                           transition: 'all 0.3s'
                         }}
                         bodyStyle={{ padding: 16 }}
-                        onClick={() => setSelectedModel(item["型号"])}
+                        onClick={() => handleSelectModel(item["型号"])}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <Text strong style={{ fontSize: 16 }}>{item["型号"]}</Text>
