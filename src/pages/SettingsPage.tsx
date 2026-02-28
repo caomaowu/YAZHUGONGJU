@@ -6,7 +6,7 @@ import type { SharedStatePersistenceAdapter } from '../core/state/sharedStore'
 export function SettingsPage() {
   const store = useSharedStateStore()
   const [machineName, setMachineName] = useSharedValue<string>('global', 'machineName', '')
-  const [materialName, setMaterialName] = useSharedValue<string>('global', 'materialName', 'A380')
+  const [materialName, setMaterialName] = useSharedValue<string>('global', 'materialName', 'ADC12')
   const [workspaceName, setWorkspaceName] = useSharedValue<string>('templates', 'workspaceName', '默认工作区')
   const [adapterStatus, setAdapterStatus] = useState<'未配置' | '已配置'>('未配置')
 
@@ -52,7 +52,7 @@ export function SettingsPage() {
                 <div style={{ height: 6 }} />
                 <Input
                   value={materialName ?? ''}
-                  placeholder="例如：A380"
+                  placeholder="例如：ADC12"
                   onChange={(e) => setMaterialName(e.target.value)}
                 />
               </div>

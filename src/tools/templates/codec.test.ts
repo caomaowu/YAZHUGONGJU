@@ -4,8 +4,8 @@ import { createPQ2TemplateDoc, TEMPLATE_SCHEMA_ID, type TemplateDocument } from 
 import type { PQ2Params } from '../pq2/types'
 
 const baseParams: PQ2Params = {
-  materialId: 'A380',
-  densityKgM3: 2680,
+  materialId: 'ADC12',
+  densityKgM3: 2650,
   inputBasis: 'mass',
   castingMassKg: 1.2,
   castingVolumeCm3: 450,

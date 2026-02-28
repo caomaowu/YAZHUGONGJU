@@ -102,7 +102,7 @@ function MainLayout() {
   if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
-        <Spin size="large" tip="加载中..." />
+        <Spin size="large" />
       </div>
     )
   }
@@ -155,6 +155,7 @@ function MainLayout() {
 
       <div className="menuWrap">
         <Menu
+          mode="inline"
           selectedKeys={[activeTool?.id ?? '']}
           inlineCollapsed={isAiKnowledgeMode}
           onClick={({ key }) => {

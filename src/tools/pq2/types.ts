@@ -1,4 +1,4 @@
-export type PQ2MaterialId = 'A380' | 'ADC12' | 'AZ91D' | 'ALSi9Cu3'
+export type PQ2MaterialId = 'ADC12' | 'AZ91D' | 'ALSi9Cu3'
 
 export type PQ2Material = {
   id: PQ2MaterialId

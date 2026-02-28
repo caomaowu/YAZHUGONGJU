@@ -49,6 +49,7 @@ interface SimulationParams {
   // 多段速度控制点 (基于冲头起始位置)
   speedPoints: Array<{ position: number; speed: number }>;
   slowMotionFactor: number;
+  customDensity?: number; // kg/m³
 }
 
 type SimulationCalculations = {
@@ -76,7 +77,7 @@ type ThemeToken = ReturnType<typeof theme.useToken>['token'];
 
 
 const DEFAULT_PARAMS: SimulationParams = {
-  materialId: 'A380',
+  materialId: 'ADC12',
   productWeight: 500,
   runnerWeight: 200,
   overflowWeight: 100,
@@ -96,6 +97,7 @@ const DEFAULT_PARAMS: SimulationParams = {
     { position: 400, speed: 3.0 },
   ],
   slowMotionFactor: 9,
+  customDensity: 2650,
 };
 
 export const FillingSimulationPage: React.FC = () => {
@@ -107,7 +109,7 @@ export const FillingSimulationPage: React.FC = () => {
   // --- 计算逻辑 ---
   const calculations = useMemo<SimulationCalculations>(() => {
     const material = getMaterialById(params.materialId);
-    const density = material.densityKgM3 / 1000; // g/cm³
+    const density = (params.customDensity ?? material.densityKgM3) / 1000; // g/cm³
     
     // 压室几何计算
     const areaMm2 = Math.PI * Math.pow(params.plungerDiameter / 2, 2);
@@ -345,8 +347,20 @@ export const FillingSimulationPage: React.FC = () => {
                     <Form.Item label="材料">
                       <Select 
                         value={params.materialId}
-                        onChange={v => setParams({...params, materialId: v})}
-                        options={PQ2_MATERIALS.map(m => ({ label: m.name, value: m.id }))}
+                        onChange={v => {
+                            const mat = getMaterialById(v);
+                            setParams({...params, materialId: v, customDensity: mat.densityKgM3});
+                        }}
+                        options={PQ2_MATERIALS.map(m => ({ label: `${m.name} (${m.densityKgM3} kg/m³)`, value: m.id }))}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item label="密度 (kg/m³)">
+                      <InputNumber
+                        value={params.customDensity ?? getMaterialById(params.materialId).densityKgM3}
+                        onChange={v => setParams({...params, customDensity: v ?? 0})}
+                        style={{ width: '100%' }}
                       />
                     </Form.Item>
                   </Col>

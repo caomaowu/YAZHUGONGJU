@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Tag, Typography, theme as antTheme } from 'antd';
+import { Card, Tag, Typography, theme as antTheme, Checkbox } from 'antd';
 import { RocketOutlined, ColumnHeightOutlined } from '@ant-design/icons';
 import type { DieCastingMachine } from '../../types/machine';
 import machineSmallImg from '../../assets/images/machine-small.png';
@@ -10,9 +10,12 @@ const { Text, Title } = Typography;
 interface MachineCardProps {
   machine: DieCastingMachine;
   onClick: (machine: DieCastingMachine) => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (selected: boolean) => void;
 }
 
-export const MachineCard: React.FC<MachineCardProps> = ({ machine, onClick }) => {
+export const MachineCard: React.FC<MachineCardProps> = ({ machine, onClick, selectable, selected, onSelect }) => {
   const { token } = antTheme.useToken();
   
   // Status config
@@ -31,19 +34,43 @@ export const MachineCard: React.FC<MachineCardProps> = ({ machine, onClick }) =>
   return (
     <Card
       hoverable
-      onClick={() => onClick(machine)}
+      onClick={() => {
+        if (selectable && onSelect) {
+          onSelect(!selected);
+        } else {
+          onClick(machine);
+        }
+      }}
       style={{
         borderRadius: 20,
         overflow: 'hidden',
-        border: 'none',
-        background: token.colorBgContainer,
-        boxShadow: `0 4px 20px -2px rgba(139, 92, 246, 0.08)`,
+        border: selected ? `2px solid ${token.colorPrimary}` : 'none',
+        background: selected ? token.colorPrimaryBg : token.colorBgContainer,
+        boxShadow: selected ? `0 4px 20px -2px ${token.colorPrimary}40` : `0 4px 20px -2px rgba(139, 92, 246, 0.08)`,
         transition: 'all 0.3s ease',
         position: 'relative',
+        transform: selected ? 'translateY(-4px)' : 'none',
       }}
       bodyStyle={{ padding: 0 }} // Remove default padding to allow image to span full width
       className="machine-card"
     >
+      {selectable && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 16,
+            left: 16,
+            zIndex: 20,
+          }}
+          onClick={(e) => {
+             e.stopPropagation();
+             if (onSelect) onSelect(!selected);
+          }}
+        >
+          <Checkbox checked={selected} style={{ transform: 'scale(1.5)' }} />
+        </div>
+      )}
+
       {/* Breathing Status Light - Moved to top right over image */}
       <div
         style={{

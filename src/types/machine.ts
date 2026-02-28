@@ -44,6 +44,7 @@ export interface MachineModelSpecs {
   最大铸造面积_40MPa_cm2: number;
   压射位置_mm: number | string;
   冲头行程_mm: number;
+  料管内部长度_mm?: number;
   压室法兰直径_mm: number | string;
   法兰高度_mm: number | string;
   顶出力_KN: number;

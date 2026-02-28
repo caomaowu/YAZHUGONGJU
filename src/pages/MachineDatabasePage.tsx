@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Layout, Input, Segmented, Row, Col, Typography, Button, theme as antTheme, message } from 'antd';
-import { SearchOutlined, AppstoreOutlined, EnvironmentOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons';
+import { Layout, Input, Segmented, Row, Col, Typography, Button, theme as antTheme, message, Space, Checkbox, Modal, Select } from 'antd';
+import { SearchOutlined, AppstoreOutlined, EnvironmentOutlined, PlusOutlined, SettingOutlined, DeleteOutlined, FolderOpenOutlined, CloseOutlined, CheckSquareOutlined } from '@ant-design/icons';
 import { MachineCard } from '../components/machine/MachineCard';
 import { MachineDetailDrawer } from '../components/machine/MachineDetailDrawer';
 import { LocationManagerModal } from '../components/machine/LocationManagerModal';
@@ -21,6 +21,12 @@ export const MachineDatabasePage: React.FC = () => {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
+  // Batch Management State
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [targetLocation, setTargetLocation] = useState<string | null>(null);
+
   // Permissions
   const canEdit = user?.role === 'admin' || user?.role === 'engineer';
   const canDelete = user?.role === 'admin';
@@ -104,6 +110,26 @@ export const MachineDatabasePage: React.FC = () => {
         setIsLoaded(true);
       });
   }, []);
+
+  // Enrich machines with rawSpecs from models if missing
+  useEffect(() => {
+    if (machines.length > 0 && machineModels.length > 0) {
+      setMachines(prev => {
+        const next = prev.map(m => {
+          if (!m.rawSpecs) {
+            const found = machineModels.find(spec => spec.型号 === m.model);
+            if (found) {
+              return { ...m, rawSpecs: found };
+            }
+          }
+          return m;
+        });
+        // Only update if changes happened to avoid infinite loop
+        const isChanged = next.some((m, i) => m.rawSpecs !== prev[i].rawSpecs);
+        return isChanged ? next : prev;
+      });
+    }
+  }, [machineModels, machines.length]);
 
   // Persist machines to API whenever they change
   useEffect(() => {
@@ -195,6 +221,53 @@ export const MachineDatabasePage: React.FC = () => {
     message.success('设备已删除');
   };
 
+  // Batch Management Handlers
+  const handleBatchDelete = () => {
+    if (selectedIds.size === 0) {
+      message.warning('请先选择设备');
+      return;
+    }
+    Modal.confirm({
+      title: '批量删除设备',
+      content: `确定要删除选中的 ${selectedIds.size} 台设备吗？此操作无法撤销。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => {
+        setMachines(prev => prev.filter(m => !selectedIds.has(m.id)));
+        setSelectedIds(new Set());
+        setIsBatchMode(false);
+        message.success('设备已批量删除');
+      },
+    });
+  };
+
+  const handleBatchMove = () => {
+    if (selectedIds.size === 0) {
+      message.warning('请先选择设备');
+      return;
+    }
+    setIsMoveModalOpen(true);
+  };
+
+  const confirmBatchMove = () => {
+    if (!targetLocation) {
+      message.error('请选择目标位置');
+      return;
+    }
+    setMachines(prev => prev.map(m => {
+      if (selectedIds.has(m.id)) {
+        return { ...m, location: targetLocation };
+      }
+      return m;
+    }));
+    setSelectedIds(new Set());
+    setIsBatchMode(false);
+    setIsMoveModalOpen(false);
+    setTargetLocation(null);
+    message.success('设备位置已批量更新');
+  };
+
   return (
     <Layout style={{ background: 'transparent', height: '100%' }}>
       <Content style={{ 
@@ -213,17 +286,32 @@ export const MachineDatabasePage: React.FC = () => {
             <Title level={2} style={{ margin: 0, fontWeight: 800, color: '#4C1D95' }}>压铸机数据库</Title>
             <Text type="secondary">管理和查看所有压铸设备及其性能参数</Text>
           </div>
-          {canAdd && (
-            <Button 
-              type="primary" 
-              size="large" 
-              icon={<PlusOutlined />} 
-              style={{ borderRadius: 12 }}
-              onClick={() => setIsAddModalOpen(true)}
-            >
-              新增设备
-            </Button>
-          )}
+          <Space>
+             {(canEdit || canDelete) && (
+                <Button 
+                  size="large"
+                  icon={isBatchMode ? <CloseOutlined /> : <CheckSquareOutlined />}
+                  onClick={() => {
+                     setIsBatchMode(!isBatchMode);
+                     setSelectedIds(new Set());
+                  }}
+                  style={{ borderRadius: 12 }}
+                >
+                  {isBatchMode ? '退出批量' : '批量管理'}
+                </Button>
+             )}
+             {canAdd && (
+               <Button 
+                 type="primary" 
+                 size="large" 
+                 icon={<PlusOutlined />} 
+                 style={{ borderRadius: 12 }}
+                 onClick={() => setIsAddModalOpen(true)}
+               >
+                 新增设备
+               </Button>
+             )}
+          </Space>
         </div>
 
         {/* Toolbar Section */}
@@ -282,6 +370,17 @@ export const MachineDatabasePage: React.FC = () => {
                 <MachineCard 
                    machine={machine} 
                    onClick={() => setSelectedMachine(machine)} 
+                   selectable={isBatchMode}
+                   selected={selectedIds.has(machine.id)}
+                   onSelect={(selected) => {
+                      const newSet = new Set(selectedIds);
+                      if (selected) {
+                        newSet.add(machine.id);
+                      } else {
+                        newSet.delete(machine.id);
+                      }
+                      setSelectedIds(newSet);
+                   }}
                 />
               </Col>
             ))}
@@ -321,6 +420,73 @@ export const MachineDatabasePage: React.FC = () => {
           onCreate={handleAddMachine}
           machineModels={machineModels}
         />
+
+        {/* Batch Actions Bar */}
+        {isBatchMode && (
+          <div style={{
+            position: 'fixed',
+            bottom: 32,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(12px)',
+            padding: '8px 16px',
+            borderRadius: 32,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            zIndex: 1000,
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+               <Typography.Text style={{ color: '#fff', marginRight: 8, fontWeight: 500 }}>已选择 {selectedIds.size} 项</Typography.Text>
+               <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.2)' }} />
+               
+               {canEdit && (
+                 <Button type="text" icon={<FolderOpenOutlined />} style={{ color: '#fff' }} onClick={handleBatchMove}>
+                   移动至...
+                 </Button>
+               )}
+               
+               {canDelete && (
+                 <Button type="text" danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+                   删除
+                 </Button>
+               )}
+               
+               <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.2)' }} />
+               <Button type="text" icon={<CloseOutlined />} style={{ color: 'rgba(255,255,255,0.6)' }} onClick={() => setIsBatchMode(false)}>
+                 退出
+               </Button>
+             </div>
+          </div>
+        )}
+
+        {/* Move Modal */}
+        <Modal
+          title="移动设备至车间"
+          open={isMoveModalOpen}
+          onCancel={() => {
+             setIsMoveModalOpen(false);
+             setTargetLocation(null);
+          }}
+          onOk={confirmBatchMove}
+          okText="确认移动"
+          cancelText="取消"
+          okButtonProps={{ disabled: !targetLocation }}
+        >
+           <div style={{ padding: '24px 0' }}>
+             <p style={{ marginBottom: 12 }}>将选中的 <span style={{ fontWeight: 'bold', color: token.colorPrimary }}>{selectedIds.size}</span> 台设备移动到：</p>
+             <Select
+               style={{ width: '100%' }}
+               placeholder="选择目标车间"
+               value={targetLocation}
+               onChange={setTargetLocation}
+               options={availableLocations.map(loc => ({ label: loc, value: loc }))}
+             />
+           </div>
+        </Modal>
 
       </Content>
     </Layout>

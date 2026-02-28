@@ -28,8 +28,8 @@ import { getMaterialById, PQ2_MATERIALS } from '../tools/pq2/materials'
 import type { PQ2Params } from '../tools/pq2/types'
 
 const DEFAULT_PARAMS: PQ2Params = {
-  materialId: 'A380',
-  densityKgM3: 2680,
+  materialId: 'ADC12',
+  densityKgM3: 2650,
   inputBasis: 'mass',
   castingMassKg: 1.2,
   castingVolumeCm3: 450,
@@ -310,7 +310,7 @@ export function PQ2Page() {
       <Col span={12}>
         <Form.Item label="材料" name="materialId" rules={[{ required: true }]}>
           <Select
-            options={PQ2_MATERIALS.map((m) => ({ value: m.id, label: m.name }))}
+            options={PQ2_MATERIALS.map((m) => ({ value: m.id, label: `${m.name} (${m.densityKgM3} kg/m³)` }))}
             showSearch
             optionFilterProp="label"
             onChange={(val) => {

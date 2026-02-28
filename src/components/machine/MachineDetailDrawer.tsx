@@ -113,6 +113,7 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
         <Descriptions.Item label="最大铸造面积 (40MPa)">{rawSpecs.最大铸造面积_40MPa_cm2} cm²</Descriptions.Item>
         <Descriptions.Item label="压射位置">{rawSpecs.压射位置_mm} mm</Descriptions.Item>
         <Descriptions.Item label="冲头行程">{rawSpecs.冲头行程_mm} mm</Descriptions.Item>
+        <Descriptions.Item label="料管内部长度">{rawSpecs.料管内部长度_mm ?? '-'} mm</Descriptions.Item>
         <Descriptions.Item label="压室法兰直径">{rawSpecs.压室法兰直径_mm} mm</Descriptions.Item>
         <Descriptions.Item label="法兰高度">{rawSpecs.法兰高度_mm} mm</Descriptions.Item>
         <Descriptions.Item label="顶出力">{rawSpecs.顶出力_KN} KN</Descriptions.Item>

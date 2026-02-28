@@ -3,8 +3,8 @@ import { applyParamLinkage, computePQ2 } from './compute'
 import type { PQ2Params } from './types'
 
 const base: PQ2Params = {
-  materialId: 'A380',
-  densityKgM3: 2680,
+  materialId: 'ADC12',
+  densityKgM3: 2650,
   inputBasis: 'mass',
   castingMassKg: 1.2,
   castingVolumeCm3: 450,
@@ -36,7 +36,7 @@ describe('pq2 compute', () => {
 
   it('links mass to volume based on density', () => {
     const next = applyParamLinkage({ ...base, inputBasis: 'mass', castingMassKg: 2 })
-    expect(next.castingVolumeCm3).toBeCloseTo(2 / (2680 / 1e6), 6)
+    expect(next.castingVolumeCm3).toBeCloseTo(2 / (2650 / 1e6), 6)
   })
 
   it('produces a consistent operating point', () => {
@@ -76,9 +76,9 @@ describe('pq2 compute', () => {
     })
     // Pm = Phyd * (dhyd/dpt)^2
     // 16 MPa = 160 kg/cm², dhyd = 21 cm, dpt = 13 cm
-    // Pm = 160 * (21/13)^2 ≈ 417.5 kg/cm² ≈ 40.9 MPa
+    // Pm = 16 * (21/13)^2 ≈ 41.75 MPa
     expect(result.machineMaxPressureMPa).toBeGreaterThan(0)
-    expect(result.machineMaxPressureMPa).toBeCloseTo(40.9, 0)
+    expect(result.machineMaxPressureMPa).toBeCloseTo(41.75, 1)
   })
 })
 

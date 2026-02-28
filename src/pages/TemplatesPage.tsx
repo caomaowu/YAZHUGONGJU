@@ -568,7 +568,7 @@ export function TemplatesPage() {
           <div className="pill">
             <Typography.Text type="secondary">模板名称</Typography.Text>
             <div style={{ height: 6 }} />
-            <Input value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="例如：A380_薄壁_01" />
+            <Input value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="例如：ADC12_薄壁_01" />
           </div>
           <div className="pill">
             <Typography.Text type="secondary">描述（可选）</Typography.Text>
