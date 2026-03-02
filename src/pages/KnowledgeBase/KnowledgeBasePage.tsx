@@ -1,5 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Drawer, Dropdown, Empty, Form, Grid, Input, Layout, Modal, Select, Space, Spin, Tag, Typography, Upload, theme, message } from 'antd'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  Alert,
+  Button,
+  Card,
+  Drawer,
+  Dropdown,
+  Empty,
+  Form,
+  Grid,
+  Input,
+  Layout,
+  Modal,
+  Select,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+  Upload,
+  message,
+  theme,
+} from 'antd'
 import {
   CloudUploadOutlined,
   DeleteOutlined,
@@ -7,16 +27,20 @@ import {
   EditOutlined,
   FileImageOutlined,
   FileMarkdownOutlined,
-  MenuFoldOutlined,
   FilePdfOutlined,
   FileTextOutlined,
+  FileWordOutlined,
+  LeftOutlined,
+  MenuFoldOutlined,
   MoreOutlined,
   ReloadOutlined,
-  SearchOutlined
+  RightOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../../core/auth/useAuth'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { PdfPreview } from './components/PdfPreview'
+
+type SearchStatus = 'pending' | 'processing' | 'ready' | 'failed'
 
 type LibraryItem = {
   id: string
@@ -29,41 +53,82 @@ type LibraryItem = {
   description?: string
   category?: string
   tags?: string[]
+  searchStatus?: SearchStatus
+  searchUpdatedAt?: string
+  searchError?: string
+  searchVersion?: number
+}
+
+type SearchHit = {
+  page: number
+  snippet: string
+  source: 'native' | 'ocr'
+  indexInPage?: number
+}
+
+type SearchResult = {
+  query: string
+  totalHits: number
+  hits: SearchHit[]
+  truncated?: boolean
+}
+
+function normalizeDisplayName(name: string) {
+  const value = String(name || '').trim()
+  const m = value.match(/^(.+)(\.[a-z0-9]{1,8})\2$/i)
+  if (!m) return value
+  return `${m[1]}${m[2]}`
+}
+
+const SEARCH_STATUS_LABEL: Record<SearchStatus, string> = {
+  pending: '待建立索引',
+  processing: '索引处理中',
+  ready: '可检索',
+  failed: '索引失败',
 }
 
 export function KnowledgeBasePage() {
   const { token } = theme.useToken()
   const screens = Grid.useBreakpoint()
   const { user, token: authToken } = useAuth()
+
   const [q, setQ] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('')
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [items, setItems] = useState<LibraryItem[]>([])
+
   const [uploadOpen, setUploadOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [editingItem, setEditingItem] = useState<LibraryItem | null>(null)
   const [editSaving, setEditSaving] = useState(false)
   const [editForm] = Form.useForm()
+
   const [previewItem, setPreviewItem] = useState<LibraryItem | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewText, setPreviewText] = useState('')
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>('pending')
+  const [searchError, setSearchError] = useState('')
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
+  const [activeHitIndex, setActiveHitIndex] = useState(0)
+  const [targetPdfPage, setTargetPdfPage] = useState<number>(1)
+
+  const pollTimerRef = useRef<number | null>(null)
+  const textHitRefs = useRef<Record<number, HTMLSpanElement | null>>({})
 
   const immersiveLeftOffset = screens.md ? 92 : 0
   const immersiveWidth = screens.md ? `calc(100vw - ${immersiveLeftOffset}px)` : '100vw'
-
-  useEffect(() => {
-    window.dispatchEvent(new CustomEvent('kb-immersive-change', { detail: { active: !!previewItem } }))
-  }, [previewItem])
-
-  useEffect(() => {
-    return () => {
-      window.dispatchEvent(new CustomEvent('kb-immersive-change', { detail: { active: false } }))
-    }
-  }, [])
-
   const canManage = user?.role === 'admin'
+
+  const clearPollTimer = () => {
+    if (pollTimerRef.current) {
+      window.clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+  }
 
   const formatBytes = (bytes: number) => {
     const n = Number(bytes || 0)
@@ -104,6 +169,17 @@ export function KnowledgeBasePage() {
     void fetchList()
   }, [fetchList])
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('kb-immersive-change', { detail: { active: !!previewItem } }))
+  }, [previewItem])
+
+  useEffect(() => {
+    return () => {
+      clearPollTimer()
+      window.dispatchEvent(new CustomEvent('kb-immersive-change', { detail: { active: false } }))
+    }
+  }, [])
+
   const categoryOptions = useMemo(() => {
     const map = new Map<string, number>()
     for (const it of items) {
@@ -121,9 +197,83 @@ export function KnowledgeBasePage() {
     if (type === 'pdf') return <FilePdfOutlined style={{ fontSize: 20, color: '#ef4444' }} />
     if (type === 'image') return <FileImageOutlined style={{ fontSize: 20, color: '#3b82f6' }} />
     if (type === 'markdown') return <FileMarkdownOutlined style={{ fontSize: 20, color: '#a855f7' }} />
+    if (type === 'docx') return <FileWordOutlined style={{ fontSize: 20, color: '#2563eb' }} />
     return <FileTextOutlined style={{ fontSize: 20, color: '#22c55e' }} />
   }
 
+  const renderTypeLabel = (t: string) => {
+    const type = String(t || '').toLowerCase()
+    if (type === 'pdf') return 'PDF'
+    if (type === 'image') return '图片'
+    if (type === 'markdown') return 'MD'
+    if (type === 'docx') return 'Word'
+    return 'TXT'
+  }
+
+  const fetchSearchStatus = useCallback(
+    async (fileId: string, needPoll = true) => {
+      if (!authToken || !fileId) return
+      clearPollTimer()
+      try {
+        const res = await fetch(`/api/library/files/${encodeURIComponent(fileId)}/search-status`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        })
+        if (!res.ok) throw new Error('获取索引状态失败')
+        const data = (await res.json()) as { searchStatus?: SearchStatus; searchError?: string }
+        const nextStatus: SearchStatus = (data.searchStatus as SearchStatus) || 'pending'
+        setSearchStatus(nextStatus)
+        setSearchError(String(data.searchError || ''))
+        if (needPoll && (nextStatus === 'pending' || nextStatus === 'processing')) {
+          pollTimerRef.current = window.setTimeout(() => {
+            void fetchSearchStatus(fileId, true)
+          }, 2000)
+        }
+      } catch (e) {
+        setSearchStatus('failed')
+        setSearchError(e instanceof Error ? e.message : '获取索引状态失败')
+      }
+    },
+    [authToken]
+  )
+
+  const runSearch = useCallback(async () => {
+    if (!authToken || !previewItem) return
+    const keyword = searchKeyword.trim()
+    if (!keyword) {
+      setSearchResult(null)
+      setActiveHitIndex(0)
+      return
+    }
+    setSearching(true)
+    try {
+      const url = `/api/library/files/${encodeURIComponent(previewItem.id)}/search?q=${encodeURIComponent(keyword)}&limit=200`
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${authToken}` } })
+      if (res.status === 202) {
+        setSearchStatus('processing')
+        setSearchResult(null)
+        return
+      }
+      if (res.status === 409) {
+        const data = (await res.json()) as { searchError?: string }
+        setSearchStatus('failed')
+        setSearchError(String(data.searchError || '索引失败'))
+        setSearchResult(null)
+        return
+      }
+      if (!res.ok) throw new Error('搜索失败')
+      const data = (await res.json()) as SearchResult
+      setSearchStatus('ready')
+      setSearchResult(data)
+      setActiveHitIndex(0)
+      if (data.hits.length > 0) {
+        setTargetPdfPage(Math.max(1, Number(data.hits[0].page) || 1))
+      }
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '搜索失败')
+    } finally {
+      setSearching(false)
+    }
+  }, [authToken, previewItem, searchKeyword])
   const downloadItem = async (it: LibraryItem) => {
     if (!authToken) return
     try {
@@ -146,20 +296,36 @@ export function KnowledgeBasePage() {
   }
 
   const closePreview = () => {
+    clearPollTimer()
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
     setPreviewText('')
     setPreviewItem(null)
     setPreviewLoading(false)
+    setSearchResult(null)
+    setSearchKeyword('')
+    setActiveHitIndex(0)
+    setSearchError('')
+    setSearchStatus('pending')
   }
 
   const openPreview = async (it: LibraryItem) => {
     if (!authToken) return
+    clearPollTimer()
     setPreviewItem(it)
     setPreviewLoading(true)
     setPreviewText('')
+    setSearchResult(null)
+    setSearchKeyword('')
+    setActiveHitIndex(0)
+    setSearchError('')
+    setSearchStatus(it.searchStatus || 'pending')
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
+    setTargetPdfPage(1)
+
+    void fetchSearchStatus(it.id, true)
+
     try {
       const res = await fetch(`/api/library/files/${encodeURIComponent(it.id)}/preview`, {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -179,11 +345,27 @@ export function KnowledgeBasePage() {
     }
   }
 
+  const reindexItem = async (it: LibraryItem) => {
+    if (!authToken) return
+    try {
+      const res = await fetch(`/api/library/files/${encodeURIComponent(it.id)}/reindex`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+      if (!res.ok) throw new Error('重建索引失败')
+      message.success('已提交重建索引任务')
+      await fetchSearchStatus(it.id, true)
+      void fetchList()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '重建索引失败')
+    }
+  }
+
   const deleteItem = async (it: LibraryItem) => {
     if (!authToken) return
     Modal.confirm({
       title: '删除资料',
-      content: `确定删除「${it.originalName}」吗？此操作不可恢复。`,
+      content: `确定删除「${it.originalName}」吗？该操作不可恢复。`,
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
@@ -241,6 +423,77 @@ export function KnowledgeBasePage() {
     }
   }
 
+  const activeHit = searchResult?.hits[activeHitIndex] || null
+  useEffect(() => {
+    if (!activeHit || !previewItem) return
+    if (previewItem.type === 'pdf') {
+      setTargetPdfPage(Math.max(1, Number(activeHit.page) || 1))
+      return
+    }
+    const node = textHitRefs.current[activeHitIndex]
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [activeHit, activeHitIndex, previewItem])
+
+  const switchHit = (delta: number) => {
+    if (!searchResult || searchResult.hits.length === 0) return
+    const total = searchResult.hits.length
+    const next = (activeHitIndex + delta + total) % total
+    setActiveHitIndex(next)
+  }
+
+  const renderHighlightedText = (text: string, keyword: string) => {
+    textHitRefs.current = {}
+    const qv = keyword.trim()
+    if (!qv) {
+      return (
+        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13 }}>
+          {text}
+        </pre>
+      )
+    }
+    const lower = text.toLowerCase()
+    const needle = qv.toLowerCase()
+    const nodes: ReactNode[] = []
+    let cursor = 0
+    let hitIndex = 0
+    while (cursor < text.length) {
+      const idx = lower.indexOf(needle, cursor)
+      if (idx < 0) {
+        nodes.push(text.slice(cursor))
+        break
+      }
+      if (idx > cursor) nodes.push(text.slice(cursor, idx))
+      const start = idx
+      const end = idx + needle.length
+      const currentHitIndex = hitIndex
+      const isActive = currentHitIndex === activeHitIndex
+      nodes.push(
+        <mark
+          key={`${start}-${end}`}
+          ref={(el) => {
+            textHitRefs.current[currentHitIndex] = el
+          }}
+          style={{
+            background: isActive ? '#fde68a' : '#fef08a',
+            padding: '0 2px',
+            borderRadius: 2,
+          }}
+        >
+          {text.slice(start, end)}
+        </mark>
+      )
+      cursor = end
+      hitIndex += 1
+    }
+    return (
+      <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13 }}>
+        {nodes}
+      </pre>
+    )
+  }
+
   const header = useMemo(() => {
     return (
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -253,7 +506,7 @@ export function KnowledgeBasePage() {
             onChange={(e) => setQ(e.target.value)}
             onPressEnter={() => void fetchList()}
             prefix={<SearchOutlined />}
-            placeholder="搜索文件名/描述…"
+            placeholder="搜索文件名/描述"
             allowClear
             style={{ maxWidth: 420 }}
           />
@@ -263,11 +516,12 @@ export function KnowledgeBasePage() {
               setTypeFilter(v)
               void fetchList({ type: v })
             }}
-            style={{ width: 150 }}
+            style={{ width: 160 }}
             options={[
               { label: '全部类型', value: '' },
               { label: 'PDF', value: 'pdf' },
               { label: '图片', value: 'image' },
+              { label: 'Word', value: 'docx' },
               { label: 'Markdown', value: 'markdown' },
               { label: '文本', value: 'text' },
             ]}
@@ -293,7 +547,6 @@ export function KnowledgeBasePage() {
       </div>
     )
   }, [q, canManage, typeFilter, categoryFilter, categoryOptions, fetchList])
-
   return (
     <Layout style={{ height: 'calc(100vh - 64px)', background: token.colorBgLayout }}>
       <Layout.Content style={{ padding: 16 }}>
@@ -354,25 +607,20 @@ export function KnowledgeBasePage() {
             </div>
           ) : items.length === 0 ? (
             <div style={{ padding: 48 }}>
-              <Empty description="暂无资料，先上传一些文档吧" />
+              <Empty description="暂无资料，先上传文档吧" />
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
               {items.map((it) => (
-                <Card
-                  key={it.id}
-                  hoverable
-                  className="kbGlassCard"
-                  styles={{ body: { padding: 14 } }}
-                >
+                <Card key={it.id} hoverable className="kbGlassCard" styles={{ body: { padding: 14 } }}>
                   <div className="kbCover">
                     {renderTypeIcon(it.type)}
                     <Tag color="purple" style={{ margin: 0, borderRadius: 999, border: 0 }}>
-                      {it.type === 'pdf' ? 'PDF' : it.type === 'image' ? '图片' : it.type === 'markdown' ? 'MD' : 'TXT'}
+                      {renderTypeLabel(it.type)}
                     </Tag>
                   </div>
                   <Typography.Text strong style={{ display: 'block' }} ellipsis>
-                    {it.originalName}
+                    {normalizeDisplayName(it.originalName)}
                   </Typography.Text>
                   <div className="kbMeta">
                     <Typography.Text type="secondary" style={{ fontSize: 12 }} ellipsis>
@@ -382,8 +630,11 @@ export function KnowledgeBasePage() {
                       {formatBytes(it.sizeBytes)}
                     </Typography.Text>
                   </div>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
                     {new Date(it.uploadedAt).toLocaleString()}
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {SEARCH_STATUS_LABEL[(it.searchStatus || 'pending') as SearchStatus]}
                   </Typography.Text>
                   <div className="kbActions">
                     <Space size={8}>
@@ -400,10 +651,12 @@ export function KnowledgeBasePage() {
                         menu={{
                           items: [
                             { key: 'edit', icon: <EditOutlined />, label: '编辑信息' },
+                            { key: 'reindex', icon: <ReloadOutlined />, label: '重建索引' },
                             { key: 'delete', icon: <DeleteOutlined />, label: '删除', danger: true },
                           ],
                           onClick: ({ key }) => {
                             if (key === 'edit') openEdit(it)
+                            if (key === 'reindex') void reindexItem(it)
                             if (key === 'delete') void deleteItem(it)
                           },
                         }}
@@ -417,6 +670,7 @@ export function KnowledgeBasePage() {
             </div>
           )}
         </Card>
+
         <Modal
           title="上传资料"
           open={uploadOpen}
@@ -430,14 +684,18 @@ export function KnowledgeBasePage() {
             uploading={uploading}
             setUploading={setUploading}
             authToken={authToken}
-            onUploaded={() => void fetchList()}
+            onUploaded={() => {
+              setUploadOpen(false)
+              void fetchList()
+            }}
           />
         </Modal>
+
         <Drawer
           title={
             <Space size={8}>
               <Button type="text" icon={<MenuFoldOutlined />} onClick={closePreview} />
-              <span>{previewItem?.originalName || '预览'}</span>
+              <span>{previewItem ? normalizeDisplayName(previewItem.originalName) : '预览'}</span>
             </Space>
           }
           open={!!previewItem}
@@ -448,6 +706,31 @@ export function KnowledgeBasePage() {
           extra={
             previewItem ? (
               <Space>
+                <Input
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onPressEnter={() => void runSearch()}
+                  allowClear
+                  placeholder="全文检索关键词"
+                  style={{ width: 260 }}
+                  suffix={searching ? <Spin size="small" /> : null}
+                />
+                <Button icon={<SearchOutlined />} loading={searching} onClick={() => void runSearch()}>
+                  搜索
+                </Button>
+                <Button
+                  icon={<LeftOutlined />}
+                  disabled={!searchResult || searchResult.hits.length === 0}
+                  onClick={() => switchHit(-1)}
+                />
+                <Button
+                  icon={<RightOutlined />}
+                  disabled={!searchResult || searchResult.hits.length === 0}
+                  onClick={() => switchHit(1)}
+                />
+                <Typography.Text type="secondary">
+                  {searchResult && searchResult.hits.length > 0 ? `${activeHitIndex + 1}/${searchResult.hits.length}` : '0/0'}
+                </Typography.Text>
                 <Button icon={<DownloadOutlined />} onClick={() => void downloadItem(previewItem)}>
                   下载
                 </Button>
@@ -455,63 +738,121 @@ export function KnowledgeBasePage() {
             ) : null
           }
         >
-          {previewLoading ? (
-            <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}>
-              <Spin />
-            </div>
-          ) : previewItem?.type === 'pdf' ? (
-            previewUrl ? (
-              <div style={{ width: '100%', height: '100%', background: token.colorBgContainer }}>
-                <iframe
-                  title={previewItem.originalName}
-                  src={previewUrl}
-                  style={{ width: '100%', height: '100%', border: 0 }}
-                />
+          {previewItem ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', height: '100%' }}>
+              <div style={{ height: '100%', overflow: 'auto', padding: 12 }}>
+                {searchStatus !== 'ready' ? (
+                  <Alert
+                    style={{ marginBottom: 12 }}
+                    type={searchStatus === 'failed' ? 'error' : 'info'}
+                    message={`全文索引状态：${SEARCH_STATUS_LABEL[searchStatus]}`}
+                    description={searchError || '首次上传后会自动建立索引，可在索引完成后进行全文检索。'}
+                    action={
+                      canManage ? (
+                        <Button size="small" onClick={() => void reindexItem(previewItem)}>
+                          重建索引
+                        </Button>
+                      ) : undefined
+                    }
+                  />
+                ) : null}
+                {previewLoading ? (
+                  <div style={{ padding: 48, display: 'flex', justifyContent: 'center' }}>
+                    <Spin />
+                  </div>
+                ) : previewItem.type === 'pdf' ? (
+                  previewUrl ? (
+                    <PdfPreview fileUrl={previewUrl} targetPage={targetPdfPage} />
+                  ) : null
+                ) : previewItem.type === 'image' ? (
+                  previewUrl ? (
+                    <div
+                      style={{
+                        background: token.colorBgContainer,
+                        width: '100%',
+                        height: '100%',
+                        padding: 20,
+                        overflow: 'auto',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <img
+                        src={previewUrl}
+                        alt={previewItem.originalName}
+                        style={{ maxWidth: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
+                      />
+                    </div>
+                  ) : null
+                ) : (
+                  <div
+                    style={{
+                      background: token.colorBgContainer,
+                      width: '100%',
+                      minHeight: '100%',
+                      padding: 24,
+                      overflow: 'auto',
+                    }}
+                  >
+                    {renderHighlightedText(previewText || '', searchResult ? searchResult.query : '')}
+                  </div>
+                )}
               </div>
-            ) : null
-          ) : previewItem?.type === 'image' ? (
-            previewUrl ? (
               <div
                 style={{
+                  borderLeft: `1px solid ${token.colorBorderSecondary}`,
                   background: token.colorBgContainer,
-                  width: '100%',
                   height: '100%',
-                  padding: 20,
                   overflow: 'auto',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'center',
+                  padding: 12,
                 }}
               >
-                <img
-                  src={previewUrl}
-                  alt={previewItem.originalName}
-                  style={{ maxWidth: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
-                />
+                <Typography.Title level={5} style={{ marginTop: 0 }}>
+                  命中结果
+                </Typography.Title>
+                {searchResult ? (
+                  <>
+                    <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                      总命中：{searchResult.totalHits}
+                      {searchResult.truncated ? '（已截断）' : ''}
+                    </Typography.Text>
+                    {searchResult.hits.length === 0 ? (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未命中" />
+                    ) : (
+                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                        {searchResult.hits.map((hit, idx) => (
+                          <Card
+                            key={`${hit.page}-${idx}`}
+                            size="small"
+                            styles={{
+                              body: {
+                                padding: 10,
+                                border: idx === activeHitIndex ? `1px solid ${token.colorPrimary}` : undefined,
+                              },
+                            }}
+                            hoverable
+                            onClick={() => setActiveHitIndex(idx)}
+                          >
+                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                              第 {hit.page} 页 · {hit.source === 'ocr' ? 'OCR' : '文本层'}
+                            </Typography.Text>
+                            <Typography.Paragraph ellipsis={{ rows: 3 }} style={{ marginBottom: 0 }}>
+                              {hit.snippet}
+                            </Typography.Paragraph>
+                          </Card>
+                        ))}
+                      </Space>
+                    )}
+                  </>
+                ) : (
+                  <Typography.Text type="secondary">输入关键词开始搜索。</Typography.Text>
+                )}
               </div>
-            ) : null
-          ) : (
-            <div
-              style={{
-                background: token.colorBgContainer,
-                width: '100%',
-                height: '100%',
-                padding: 24,
-                overflow: 'auto',
-              }}
-            >
-              {previewItem?.type === 'markdown' ? (
-                <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{previewText || ''}</ReactMarkdown>
-                </div>
-              ) : (
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13 }}>
-                  {previewText}
-                </pre>
-              )}
             </div>
-          )}
+          ) : null}
         </Drawer>
+
         <Modal
           title="编辑资料信息"
           open={!!editingItem}
@@ -523,11 +864,7 @@ export function KnowledgeBasePage() {
           width={720}
         >
           <Form form={editForm} layout="vertical">
-            <Form.Item
-              name="originalName"
-              label="文件名"
-              rules={[{ required: true, message: '请输入文件名' }]}
-            >
+            <Form.Item name="originalName" label="文件名" rules={[{ required: true, message: '请输入文件名' }]}> 
               <Input placeholder="例如：压铸机操作手册.pdf" />
             </Form.Item>
             <Form.Item name="category" label="分类">
@@ -537,7 +874,7 @@ export function KnowledgeBasePage() {
               <Input placeholder="例如：压铸, 工艺, 维护" />
             </Form.Item>
             <Form.Item name="description" label="描述">
-              <Input.TextArea placeholder="写点备注，后续更好检索…" autoSize={{ minRows: 3, maxRows: 6 }} />
+              <Input.TextArea placeholder="便于后续检索" autoSize={{ minRows: 3, maxRows: 6 }} />
             </Form.Item>
           </Form>
         </Modal>
@@ -560,7 +897,7 @@ function UploadContent(props: {
       multiple
       disabled={!canManage || uploading}
       showUploadList
-      accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.md,.markdown,.txt"
+      accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,.gif,.md,.markdown,.txt"
       customRequest={async (options) => {
         if (!authToken) {
           options.onError?.(new Error('未登录'))
@@ -596,7 +933,7 @@ function UploadContent(props: {
           拖拽文件到此处上传
         </Typography.Title>
         <Typography.Text type="secondary">
-          支持 PDF / 图片 / Markdown / 文本。上传与删除需要管理员权限。
+          支持 PDF / Word(.docx) / 图片 / Markdown / 文本。上传与删除需要管理员权限。
         </Typography.Text>
       </div>
     </Upload.Dragger>

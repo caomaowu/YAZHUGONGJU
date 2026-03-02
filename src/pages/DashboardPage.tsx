@@ -92,9 +92,6 @@ export function DashboardPage() {
               <Button block type="primary" icon={<LineChartOutlined />} onClick={() => navigate('/pq2')}>
                 新建 PQ² 计算
               </Button>
-              <Button block onClick={() => navigate('/templates')}>
-                打开模板管理
-              </Button>
               <div className="pill">
                 <Typography.Text type="secondary">今日专注</Typography.Text>
                 <Progress percent={68} strokeColor={token.colorPrimary} trailColor="rgba(0,0,0,0.04)" />
@@ -106,9 +103,6 @@ export function DashboardPage() {
             <div className="metricRow">
               <div className="pill">
                 <Statistic title="计算次数" value={26} />
-              </div>
-              <div className="pill">
-                <Statistic title="模板数" value={8} />
               </div>
             </div>
             <div style={{ height: 10 }} />

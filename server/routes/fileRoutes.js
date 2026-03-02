@@ -6,7 +6,10 @@ import {
   previewLibraryFile,
   downloadLibraryFile,
   updateLibraryFile,
-  deleteLibraryFile
+  deleteLibraryFile,
+  getLibraryFileSearchStatus,
+  searchLibraryFileContent,
+  reindexLibraryFile
 } from '../controllers/fileController.js';
 
 const router = express.Router();
@@ -17,6 +20,9 @@ router.post('/library/files', authenticateToken, requireRole(['admin']), uploadL
 
 router.get('/library/files/:id/preview', authenticateToken, previewLibraryFile);
 router.get('/library/files/:id/download', authenticateToken, downloadLibraryFile);
+router.get('/library/files/:id/search-status', authenticateToken, getLibraryFileSearchStatus);
+router.get('/library/files/:id/search', authenticateToken, searchLibraryFileContent);
+router.post('/library/files/:id/reindex', authenticateToken, requireRole(['admin']), reindexLibraryFile);
 
 router.patch('/library/files/:id', authenticateToken, requireRole(['admin']), updateLibraryFile);
 router.delete('/library/files/:id', authenticateToken, requireRole(['admin']), deleteLibraryFile);

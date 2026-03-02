@@ -6,7 +6,8 @@ import {
   ROLES_FILE, 
   CHATS_FILE, 
   LIBRARY_FILE, 
-  LIBRARY_UPLOAD_DIR 
+  LIBRARY_UPLOAD_DIR,
+  LIBRARY_INDEX_DIR
 } from '../config/index.js';
 
 export const initializeData = async () => {
@@ -81,6 +82,41 @@ export const initializeData = async () => {
   
   // Ensure library upload dir exists
   fs.ensureDirSync(LIBRARY_UPLOAD_DIR);
+  fs.ensureDirSync(LIBRARY_INDEX_DIR);
+
+  // Migration: Ensure library search metadata exists
+  try {
+    const items = fs.readJsonSync(LIBRARY_FILE);
+    if (Array.isArray(items)) {
+      let changed = false;
+      const next = items.map((it) => {
+        if (!it || typeof it !== 'object') return it;
+        const currentStatus = String(it.searchStatus || '').trim();
+        const status = ['pending', 'processing', 'ready', 'failed'].includes(currentStatus)
+          ? (currentStatus === 'processing' ? 'pending' : currentStatus)
+          : 'pending';
+        const normalized = {
+          ...it,
+          searchStatus: status,
+          searchUpdatedAt: it.searchUpdatedAt || it.uploadedAt || new Date().toISOString(),
+          searchError: typeof it.searchError === 'string' ? it.searchError : '',
+          searchVersion: Number(it.searchVersion) > 0 ? Number(it.searchVersion) : 1,
+        };
+        if (
+          normalized.searchStatus !== it.searchStatus ||
+          normalized.searchUpdatedAt !== it.searchUpdatedAt ||
+          normalized.searchError !== it.searchError ||
+          normalized.searchVersion !== it.searchVersion
+        ) {
+          changed = true;
+        }
+        return normalized;
+      });
+      if (changed) {
+        fs.writeJsonSync(LIBRARY_FILE, next, { spaces: 2 });
+      }
+    }
+  } catch {}
 
   // Migration: Ensure permissions
   try {

@@ -8,6 +8,7 @@ import { corsMiddleware } from './middleware/cors.js';
 import { NODE_ENV, PORT, SECRET_KEY, CORS_ORIGIN } from './config/index.js';
 import { initializeData } from './utils/init.js';
 import { nowIso } from './utils/helpers.js';
+import { bootstrapLibraryIndexing } from './services/libraryIndexService.js';
 
 import authRoutes from './routes/authRoutes.js';
 import dataRoutes from './routes/dataRoutes.js';
@@ -35,6 +36,9 @@ app.use(bodyParser.json({ limit: '50mb' })); // Allow large payloads for base64 
 
 // Initialize Data
 initializeData();
+void bootstrapLibraryIndexing().catch((error) => {
+  console.error('Library indexing bootstrap failed:', error);
+});
 
 // Routes
 app.get('/api/health', (req, res) => {

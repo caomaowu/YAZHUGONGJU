@@ -1,11 +1,9 @@
-import { AppstoreOutlined, ExperimentOutlined, LineChartOutlined, SettingOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined, ThunderboltOutlined, BookOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, LineChartOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined, ThunderboltOutlined, BookOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
 import { PQ2Page } from '../pages/PQ2Page'
 import { FillingSimulationPage } from '../pages/FillingSimulationPage'
-import { SettingsPage } from '../pages/SettingsPage'
-import { TemplatesPage } from '../pages/TemplatesPage'
 import { MachineDatabasePage } from '../pages/MachineDatabasePage'
 import { UserManagementPage } from '../pages/UserManagementPage'
 import { AIKnowledgeBasePage } from '../pages/AIKnowledgeBase/AIKnowledgeBasePage'
@@ -82,26 +80,6 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <RobotOutlined />,
       order: 200,
       element: <AIKnowledgeBasePage />,
-      allowedRoles: ['admin', 'engineer', 'viewer'],
-    },
-    {
-      id: 'templates',
-      title: '模板管理',
-      navLabel: '模板管理',
-      route: '/templates',
-      icon: <ExperimentOutlined />,
-      order: 30,
-      element: <TemplatesPage />,
-      allowedRoles: ['admin', 'engineer', 'viewer'],
-    },
-    {
-      id: 'settings',
-      title: '设置',
-      navLabel: '设置',
-      route: '/settings',
-      icon: <SettingOutlined />,
-      order: 40,
-      element: <SettingsPage />,
       allowedRoles: ['admin', 'engineer', 'viewer'],
     },
     {

@@ -68,10 +68,12 @@ export function inferLibraryType(mimeType, originalName) {
   const mt = String(mimeType || '').toLowerCase();
   if (mt.startsWith('image/')) return 'image';
   if (mt === 'application/pdf') return 'pdf';
+  if (mt === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx';
   if (mt === 'text/markdown' || mt === 'text/x-markdown') return 'markdown';
   if (mt.startsWith('text/')) return 'text';
   const ext = safeFileExt(originalName);
   if (ext === '.pdf') return 'pdf';
+  if (ext === '.docx') return 'docx';
   if (ext === '.md' || ext === '.markdown') return 'markdown';
   if (ext === '.txt') return 'text';
   if (['.png', '.jpg', '.jpeg', '.webp', '.gif'].includes(ext)) return 'image';
@@ -81,6 +83,7 @@ export function inferLibraryType(mimeType, originalName) {
 export function inferMimeFromExt(originalName) {
   const ext = safeFileExt(originalName);
   if (ext === '.pdf') return 'application/pdf';
+  if (ext === '.docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   if (ext === '.md' || ext === '.markdown') return 'text/markdown';
   if (ext === '.txt') return 'text/plain';
   if (ext === '.png') return 'image/png';
