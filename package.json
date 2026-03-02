@@ -4,7 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"node server/index.js\" \"vite\"",
+    "dev": "concurrently \"node --env-file=.env.local server/index.js\" \"vite\"",
+    "mode:dev": "node scripts/switch-mode.mjs dev",
+    "mode:prod": "node scripts/switch-mode.mjs prod",
+    "start:mode": "node scripts/start-mode.mjs",
+    "build-and-start": "npm run build && npm run start",
+    "deploy:server": "bash deploy/deploy.sh",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint . --max-warnings=0",
@@ -16,7 +21,7 @@
     "format:check": "prettier . --check",
     "check": "npm run lint && npm run typecheck && npm run build",
     "preview": "vite preview",
-    "start": "node server/index.js"
+    "start": "node --env-file=.env.local server/index.js"
   },
   "dependencies": {
     "@alicloud/bailian20231229": "^2.8.1",

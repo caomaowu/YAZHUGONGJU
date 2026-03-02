@@ -27,11 +27,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
-const SECRET_KEY = 'your-secret-key-change-in-production'; // TODO: Use env var
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const PORT = Number(process.env.PORT || 3001);
+const SECRET_KEY = process.env.JWT_SECRET;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '';
+
+if (!SECRET_KEY) {
+  console.error('Missing required env var: JWT_SECRET');
+  process.exit(1);
+}
+
+if (NODE_ENV === 'production' && !CORS_ORIGIN.trim()) {
+  console.error('Missing required env var in production: CORS_ORIGIN');
+  process.exit(1);
+}
 
 // Middleware
-app.use(cors());
+const allowedOrigins = CORS_ORIGIN.split(',').map((item) => item.trim()).filter(Boolean);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (!allowedOrigins.length || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  }
+}));
 app.use(bodyParser.json({ limit: '50mb' })); // Allow large payloads for base64 images
 
 // Data file path
@@ -181,6 +208,14 @@ const requireRole = (roles) => {
 };
 
 // Routes
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    env: NODE_ENV,
+    time: nowIso()
+  });
+});
 
 // Login
 app.post('/api/auth/login', async (req, res) => {
@@ -1286,5 +1321,5 @@ if (fs.existsSync(distPath)) {
 }
 
 app.listen(PORT, () => {
-  console.log(`Local API Server running at http://localhost:${PORT}`);
+  console.log(`API Server running in ${NODE_ENV} at http://localhost:${PORT}`);
 });

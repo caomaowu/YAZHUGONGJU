@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { message } from 'antd';
+import { API_BASE_URL } from '../../../config/api';
 
 export interface BailianConfig {
   accessKeyId: string;
@@ -34,7 +35,7 @@ export const useBailian = () => {
 
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/bailian/config');
+      const res = await fetch(`${API_BASE_URL}/bailian/config`);
       const data = await res.json();
       setConfig(data);
     } catch (error) {
@@ -44,7 +45,7 @@ export const useBailian = () => {
 
   const saveConfig = useCallback(async (newConfig: BailianConfig) => {
     try {
-      const res = await fetch('http://localhost:3001/api/bailian/config', {
+      const res = await fetch(`${API_BASE_URL}/bailian/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newConfig)
@@ -62,7 +63,7 @@ export const useBailian = () => {
     if (!config.workspaceId) return;
     setLoadingFiles(true);
     try {
-      const res = await fetch('http://localhost:3001/api/bailian/files');
+      const res = await fetch(`${API_BASE_URL}/bailian/files`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setFiles(data);
@@ -88,7 +89,7 @@ export const useBailian = () => {
       reader.onload = async () => {
         const base64 = (reader.result as string).split(',')[1];
         
-        const res = await fetch('http://localhost:3001/api/bailian/documents/upload', {
+        const res = await fetch(`${API_BASE_URL}/bailian/documents/upload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

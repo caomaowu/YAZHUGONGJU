@@ -47,8 +47,13 @@ server/                # 后端服务（API、Auth、本地数据存储、百炼
 # 安装依赖
 npm install
 
-# 启动开发服务器 (前端 + 后端 API)
-npm run dev
+# 切到开发模式并启动（前端 + 后端 API）
+npm run mode:dev
+npm run start:mode
+
+# 切到生产模式并启动（先 build 再启动后端静态托管）
+npm run mode:prod
+npm run start:mode
 
 # 代码检查 + 类型检查 + 构建
 npm run check
@@ -68,3 +73,14 @@ npm run lint
 # E2E（Playwright）
 npm run e2e
 ```
+
+## 🌐 服务器一键部署（无 Docker）
+```bash
+# 首次初始化服务器（Ubuntu 22.04+）
+sudo bash scripts/install-server.sh
+
+# 之后每次发布
+npm run deploy:server
+```
+
+部署详细说明见 [DEPLOYMENT.md](./DEPLOYMENT.md)。

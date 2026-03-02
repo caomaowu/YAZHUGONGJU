@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { DEFAULT_SETTINGS } from '../types'
 import type { ChatSession, Message, AISettings } from '../types'
+import { API_BASE_URL } from '../../../config/api'
 
 export const useAIChat = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([])
@@ -28,7 +29,7 @@ export const useAIChat = () => {
 
   // Load sessions from server on mount
   useEffect(() => {
-    fetch('http://localhost:3001/api/ai/chats')
+    fetch(`${API_BASE_URL}/ai/chats`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -41,7 +42,7 @@ export const useAIChat = () => {
   // Save session to server helper
   const saveSessionToServer = async (session: ChatSession) => {
     try {
-      await fetch('http://localhost:3001/api/ai/chats', {
+      await fetch(`${API_BASE_URL}/ai/chats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(session)
@@ -76,7 +77,7 @@ export const useAIChat = () => {
       setCurrentSessionId(null)
     }
     // Delete from server
-    fetch(`http://localhost:3001/api/ai/chats/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE_URL}/ai/chats/${id}`, { method: 'DELETE' })
       .catch(e => console.error('Failed to delete session', e))
   }, [currentSessionId])
 
@@ -144,7 +145,7 @@ export const useAIChat = () => {
           // Use Bailian Knowledge Base
           const currentProvider = settings.providers[settings.currentProviderId] || settings.providers['deepseek'];
           
-          response = await fetch('http://localhost:3001/api/bailian/chat', {
+          response = await fetch(`${API_BASE_URL}/bailian/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -162,7 +163,7 @@ export const useAIChat = () => {
       } else {
           // Use Standard Proxy
           const currentProvider = settings.providers[settings.currentProviderId] || settings.providers['deepseek']
-          response = await fetch('http://localhost:3001/api/ai/proxy', {
+          response = await fetch(`${API_BASE_URL}/ai/proxy`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -296,7 +297,7 @@ export const useAIChat = () => {
         // Enhance connection error message
         if (errorMessage.includes('Connection error') || errorMessage.includes('Failed to fetch')) {
           errorMessage = `连接失败。请检查：
-1. 后端服务是否启动 (localhost:3001)
+1. 后端服务是否启动
 2. API 配置是否正确`
         }
 
@@ -335,7 +336,7 @@ export const useAIChat = () => {
       setSessions([])
       setCurrentSessionId(null)
       try {
-        await fetch('http://localhost:3001/api/ai/chats', { method: 'DELETE' })
+        await fetch(`${API_BASE_URL}/ai/chats`, { method: 'DELETE' })
       } catch (e) {
         console.error('Failed to clear history', e)
       }
