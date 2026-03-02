@@ -76,8 +76,8 @@ function createBuiltinTools(): ToolDefinition[] {
     },
     {
       id: 'ai-knowledge',
-      title: 'AI 知识库',
-      navLabel: 'AI 知识库',
+      title: 'AI助手',
+      navLabel: 'AI助手',
       route: '/ai-knowledge',
       icon: <RobotOutlined />,
       order: 200,
