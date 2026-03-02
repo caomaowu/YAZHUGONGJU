@@ -24,6 +24,7 @@ function MainLayout() {
   const [query, setQuery] = useState('')
   const { theme } = useTheme()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [kbImmersiveMode, setKbImmersiveMode] = useState(false)
   const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth()
   const isAiMode = path === '/ai'
 
@@ -63,6 +64,18 @@ function MainLayout() {
       navigate(allowedTools[0].route, { replace: true })
     }
   }, [navigate, path, allowedTools, isLoading, isAuthenticated])
+
+  useEffect(() => {
+    const onKbImmersiveChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ active?: boolean }>
+      setKbImmersiveMode(Boolean(customEvent.detail?.active))
+    }
+
+    window.addEventListener('kb-immersive-change', onKbImmersiveChange as EventListener)
+    return () => {
+      window.removeEventListener('kb-immersive-change', onKbImmersiveChange as EventListener)
+    }
+  }, [])
 
   const menuItems = useMemo(() => {
     const q = query.trim()
@@ -132,7 +145,7 @@ function MainLayout() {
         </div>
       </div>
       
-      <div style={{ padding: '0 16px 8px 16px' }}>
+      <div className="userBadgeWrap" style={{ padding: '0 16px 8px 16px' }}>
         <Tag color="purple">用户: {user?.name || user?.username} ({user?.role})</Tag>
       </div>
 
@@ -200,7 +213,7 @@ function MainLayout() {
             </div>
         </Drawer>
 
-        <div className={`appGrid${isAiMode ? ' aiMode' : ''}`}>
+        <div className={`appGrid${isAiMode ? ' aiMode' : ''}${kbImmersiveMode ? ' kbImmersiveMode' : ''}`}>
           {!isAiMode && (
             <aside className="panel panelLeft">
               <div className="panelInner panelInnerLeft">

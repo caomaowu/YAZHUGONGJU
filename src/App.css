@@ -31,6 +31,49 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+.appGrid.kbImmersiveMode {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.appGrid.kbImmersiveMode .panelInnerLeft {
+  padding: 10px 6px;
+}
+
+.appGrid.kbImmersiveMode .leftHeader,
+.appGrid.kbImmersiveMode .userBadgeWrap,
+.appGrid.kbImmersiveMode .searchInput,
+.appGrid.kbImmersiveMode .menuFooter {
+  display: none;
+}
+
+.appGrid.kbImmersiveMode .menuWrap {
+  margin-top: 0;
+}
+
+.appGrid.kbImmersiveMode .menuWrap .ant-menu-item {
+  padding-inline: 0 !important;
+  margin-inline: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.appGrid.kbImmersiveMode .menuWrap .ant-menu-title-content {
+  display: none;
+}
+
+.appGrid.kbImmersiveMode .menuWrap .ant-menu-item .anticon {
+  margin-inline-end: 0;
+  font-size: 18px;
+}
+
+.appGrid.kbImmersiveMode .menuWrap .ant-menu-item.ai-menu-item {
+  margin-top: 8px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  border-radius: 12px !important;
+}
+
 .panel {
   position: relative;
   border: 1px solid var(--panel-border);

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Drawer, Dropdown, Empty, Form, Input, Layout, Modal, Select, Space, Spin, Tag, Typography, Upload, theme, message } from 'antd'
+import { Button, Card, Drawer, Dropdown, Empty, Form, Grid, Input, Layout, Modal, Select, Space, Spin, Tag, Typography, Upload, theme, message } from 'antd'
 import {
   CloudUploadOutlined,
   DeleteOutlined,
@@ -7,6 +7,7 @@ import {
   EditOutlined,
   FileImageOutlined,
   FileMarkdownOutlined,
+  MenuFoldOutlined,
   FilePdfOutlined,
   FileTextOutlined,
   MoreOutlined,
@@ -32,6 +33,7 @@ type LibraryItem = {
 
 export function KnowledgeBasePage() {
   const { token } = theme.useToken()
+  const screens = Grid.useBreakpoint()
   const { user, token: authToken } = useAuth()
   const [q, setQ] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('')
@@ -47,6 +49,19 @@ export function KnowledgeBasePage() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewText, setPreviewText] = useState('')
+
+  const immersiveLeftOffset = screens.md ? 92 : 0
+  const immersiveWidth = screens.md ? `calc(100vw - ${immersiveLeftOffset}px)` : '100vw'
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('kb-immersive-change', { detail: { active: !!previewItem } }))
+  }, [previewItem])
+
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new CustomEvent('kb-immersive-change', { detail: { active: false } }))
+    }
+  }, [])
 
   const canManage = user?.role === 'admin'
 
@@ -419,11 +434,17 @@ export function KnowledgeBasePage() {
           />
         </Modal>
         <Drawer
-          title={previewItem?.originalName || '预览'}
+          title={
+            <Space size={8}>
+              <Button type="text" icon={<MenuFoldOutlined />} onClick={closePreview} />
+              <span>{previewItem?.originalName || '预览'}</span>
+            </Space>
+          }
           open={!!previewItem}
           onClose={closePreview}
-          width={980}
-          styles={{ body: { padding: 16, background: token.colorBgLayout } }}
+          mask={false}
+          width={immersiveWidth}
+          styles={{ body: { padding: 0, background: token.colorBgLayout, height: 'calc(100vh - 56px)' } }}
           extra={
             previewItem ? (
               <Space>
@@ -440,18 +461,11 @@ export function KnowledgeBasePage() {
             </div>
           ) : previewItem?.type === 'pdf' ? (
             previewUrl ? (
-              <div
-                style={{
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  border: `1px solid ${token.colorBorderSecondary}`,
-                  background: token.colorBgContainer,
-                }}
-              >
+              <div style={{ width: '100%', height: '100%', background: token.colorBgContainer }}>
                 <iframe
                   title={previewItem.originalName}
                   src={previewUrl}
-                  style={{ width: '100%', height: 'calc(100vh - 160px)', border: 0 }}
+                  style={{ width: '100%', height: '100%', border: 0 }}
                 />
               </div>
             ) : null
@@ -459,30 +473,35 @@ export function KnowledgeBasePage() {
             previewUrl ? (
               <div
                 style={{
-                  borderRadius: 16,
-                  padding: 12,
-                  border: `1px solid ${token.colorBorderSecondary}`,
                   background: token.colorBgContainer,
+                  width: '100%',
+                  height: '100%',
+                  padding: 20,
+                  overflow: 'auto',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
                 }}
               >
                 <img
                   src={previewUrl}
                   alt={previewItem.originalName}
-                  style={{ width: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
+                  style={{ maxWidth: '100%', height: 'auto', borderRadius: 12, display: 'block' }}
                 />
               </div>
             ) : null
           ) : (
             <div
               style={{
-                borderRadius: 16,
-                padding: 16,
-                border: `1px solid ${token.colorBorderSecondary}`,
                 background: token.colorBgContainer,
+                width: '100%',
+                height: '100%',
+                padding: 24,
+                overflow: 'auto',
               }}
             >
               {previewItem?.type === 'markdown' ? (
-                <div style={{ maxWidth: 920, margin: '0 auto' }}>
+                <div style={{ maxWidth: 1080, margin: '0 auto' }}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{previewText || ''}</ReactMarkdown>
                 </div>
               ) : (

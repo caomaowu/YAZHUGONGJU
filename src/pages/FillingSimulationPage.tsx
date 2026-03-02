@@ -40,7 +40,6 @@ interface SimulationParams {
   plungerDiameter: number; // mm
   chamberLength: number; // mm
   initialFillRatio: number; // %
-  runnerSectionArea: number; // mm2 (流道截面积)
   slowSpeed: number; // m/s
   fastSpeed: number; // m/s
   switchPosition: number; // mm (基于冲头起始点的绝对位置)
@@ -60,8 +59,6 @@ type SimulationCalculations = {
   fillStrokeMm: number;
   fillRatio: number;
   materialName: string;
-  runnerAreaMm2: number;
-  runnerLengthMm: number;
   runnerVolumeMm3: number;
   moldAreaMm2: number;
   moldHeightMm: number;
@@ -84,11 +81,10 @@ const DEFAULT_PARAMS: SimulationParams = {
   plungerDiameter: 60,
   chamberLength: 500,
   initialFillRatio: 40,
-  runnerSectionArea: 300,
   slowSpeed: 0.3,
   fastSpeed: 3.0,
   switchPosition: 350,
-  speedControlMode: 'basic',
+  speedControlMode: 'advanced',
   speedPoints: [
     { position: 0, speed: 0.2 },
     { position: 100, speed: 0.5 },
@@ -136,10 +132,8 @@ export const FillingSimulationPage: React.FC = () => {
     const fillRatio = params.initialFillRatio / 100;
     const fillStrokeMm = params.chamberLength * fillRatio; // 初始液面长度
     
-    // 流道计算
-    const runnerAreaMm2 = params.runnerSectionArea;
+    // 流道体积由流道重量与密度决定
     const runnerVolumeMm3 = (params.runnerWeight / density) * 1000;
-    const runnerLengthMm = runnerVolumeMm3 / runnerAreaMm2;
 
     // 型腔 + 渣包计算
     const moldWeight = params.productWeight + params.overflowWeight;
@@ -162,8 +156,6 @@ export const FillingSimulationPage: React.FC = () => {
       fillStrokeMm,
       fillRatio,
       materialName: material.name,
-      runnerAreaMm2,
-      runnerLengthMm,
       runnerVolumeMm3,
       moldAreaMm2,
       moldHeightMm,
@@ -399,19 +391,6 @@ export const FillingSimulationPage: React.FC = () => {
                     </Form.Item>
                   </Col>
                 </Row>
-                <Row gutter={16}>
-                  <Col span={24}>
-                    <Form.Item label="流道平均截面积 (mm²)">
-                       <InputNumber 
-                        style={{ width: '100%' }}
-                        min={1}
-                        value={params.runnerSectionArea}
-                        onChange={v => setParams({...params, runnerSectionArea: v || 300})}
-                       />
-                    </Form.Item>
-                  </Col>
-                </Row>
-
                 <Divider>重量分布 (g)</Divider>
                 <Row gutter={16}>
                   <Col span={8}>

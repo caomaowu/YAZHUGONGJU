@@ -1,0 +1,7 @@
+- [x] package.json 中运行时依赖已正确归类
+- [x] server/index.js 代码行数显著减少，主要负责组装应用
+- [x] 登录功能正常 (Auth Routes)
+- [x] 机器数据读取与保存正常 (Data Routes)
+- [x] AI 对话与配置功能正常 (AI Routes)
+- [x] 文件上传功能正常 (File Routes)
+- [x] 服务器启动无报错
