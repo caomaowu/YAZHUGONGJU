@@ -28,6 +28,53 @@ function m3sToLps(m3s: number) {
   return m3s * 1000
 }
 
+const DEFAULT_PROCESS_WINDOW = {
+  vGateMaxMps: 60,
+  vGateMinMps: 30,
+  maxFillTimeS: 0,
+} as const
+
+function applyProcessWindowMode(params: PQ2Params): PQ2Params {
+  if (params.useCustomProcessWindow) {
+    return {
+      ...params,
+      maxFillTimeS: params.maxFillTimeS ?? 0,
+    }
+  }
+
+  return {
+    ...params,
+    vGateMaxMps: DEFAULT_PROCESS_WINDOW.vGateMaxMps,
+    vGateMinMps: DEFAULT_PROCESS_WINDOW.vGateMinMps,
+    maxFillTimeS: DEFAULT_PROCESS_WINDOW.maxFillTimeS,
+  }
+}
+
+function sanitizePQ2Params(params: PQ2Params): PQ2Params {
+  return {
+    ...params,
+    densityKgM3: clampNumber(params.densityKgM3, 1, 40000),
+    castingMassKg: clampNumber(params.castingMassKg, 0, 5000),
+    castingVolumeCm3: clampNumber(params.castingVolumeCm3, 0, 5e7),
+    fillTimeS: clampNumber(params.fillTimeS, 0, 60),
+    gateWidthMm: clampNumber(params.gateWidthMm, 0, 5000),
+    gateThicknessMm: clampNumber(params.gateThicknessMm, 0, 500),
+    gateAreaMm2: clampNumber(params.gateAreaMm2, 0, 5e6),
+    dischargeCoeff: clampNumber(params.dischargeCoeff, 0.01, 1),
+    extraLossMPa: clampNumber(params.extraLossMPa, 0, 400),
+    machineMaxPressureMPa: clampNumber(params.machineMaxPressureMPa, 0, 400),
+    plungerDiameterMm: clampNumber(params.plungerDiameterMm, 1, 500),
+    plungerMaxSpeedMps: clampNumber(params.plungerMaxSpeedMps, 0, 20),
+    // 工艺窗口参数
+    vGateMaxMps: clampNumber(params.vGateMaxMps, 10, 200),
+    vGateMinMps: clampNumber(params.vGateMinMps, 5, 100),
+    maxFillTimeS: clampNumber(params.maxFillTimeS ?? 0, 0, 60),
+    // 液压参数
+    hydraulicPressureMPa: clampNumber(params.hydraulicPressureMPa, 1, 500),
+    hydraulicCylinderDiameterMm: clampNumber(params.hydraulicCylinderDiameterMm, 1, 1000),
+  }
+}
+
 export function applyParamLinkage(raw: PQ2Params): PQ2Params {
   const next: PQ2Params = { ...raw }
 
@@ -84,18 +131,26 @@ export function normalizePQ2Params(params: PQ2Params): PQ2Normalized {
 }
 
 export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
-  const params = applyParamLinkage(rawParams)
+  const linkedParams = applyParamLinkage(rawParams)
+  const effectiveParams = applyProcessWindowMode(linkedParams)
+  const params = sanitizePQ2Params(effectiveParams)
   const normalized = normalizePQ2Params(params)
   const warnings: string[] = []
   const errors: string[] = []
 
-  if (!(params.densityKgM3 > 0)) errors.push('密度必须大于 0')
-  if (!(params.fillTimeS > 0)) errors.push('充型时间必须大于 0')
-  if (!(params.gateAreaMm2 > 0)) errors.push('浇口面积必须大于 0')
-  if (!(params.dischargeCoeff > 0 && params.dischargeCoeff <= 1)) errors.push('流量系数需在 (0, 1] 内')
-  if (!(params.machineMaxPressureMPa > 0)) errors.push('机台最大压力必须大于 0')
-  if (!(params.plungerDiameterMm > 0)) errors.push('冲头直径必须大于 0')
-  if (!(params.plungerMaxSpeedMps > 0)) errors.push('冲头最大速度必须大于 0')
+  if (!(effectiveParams.densityKgM3 > 0)) errors.push('密度必须大于 0')
+  if (!(effectiveParams.fillTimeS > 0)) errors.push('充型时间必须大于 0')
+  if (!(effectiveParams.gateAreaMm2 > 0)) errors.push('浇口面积必须大于 0')
+  if (!(effectiveParams.dischargeCoeff > 0 && effectiveParams.dischargeCoeff <= 1)) errors.push('流量系数需在 (0, 1] 内')
+  if (!(effectiveParams.machineMaxPressureMPa > 0)) errors.push('机台最大压力必须大于 0')
+  if (!(effectiveParams.plungerDiameterMm > 0)) errors.push('冲头直径必须大于 0')
+  if (!(effectiveParams.plungerMaxSpeedMps > 0)) errors.push('冲头最大速度必须大于 0')
+  if (effectiveParams.useCustomProcessWindow) {
+    if (!(effectiveParams.vGateMaxMps > 0)) errors.push('最大浇口速度必须大于 0')
+    if (!(effectiveParams.vGateMinMps > 0)) errors.push('最小浇口速度必须大于 0')
+    if (!(effectiveParams.vGateMaxMps > effectiveParams.vGateMinMps)) errors.push('工艺窗口要求 Vmax 必须大于 Vmin')
+    if (!((effectiveParams.maxFillTimeS ?? 0) >= 0)) errors.push('最大充型时间不能小于 0')
+  }
 
   const castingVolumeM3 = normalized.castingVolumeM3
   if (!(castingVolumeM3 > 0)) errors.push('充型体积必须大于 0')
@@ -206,11 +261,11 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
   const pWindowMinMPa = paToMPa(pWindowMinPa)
 
   // Qmin = Vcav / t (基于最大填充时间的最小流量)
-  // 如果提供了 maxFillTimeS，则使用它计算 Qmin；否则使用当前 fillTimeS（此时窗口左边界贴合工作点）
+  // 仅在设置 maxFillTimeS > 0 时启用 Qmin 左边界
   const qWindowMinLps =
     params.maxFillTimeS && params.maxFillTimeS > 0
       ? m3sToLps(castingVolumeM3 / params.maxFillTimeS)
-      : qRequiredLps
+      : undefined
 
   const intermediate = {
     gateAreaMm2: params.gateAreaMm2,
@@ -256,13 +311,17 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
   if (params.fillTimeS < 0.02) warnings.push('充型时间偏小，可能导致需求流量/压力显著升高')
   if (params.fillTimeS > 0.2) warnings.push('充型时间偏大，可能导致工作点落入低速区域')
   
-  if (params.maxFillTimeS && params.maxFillTimeS > 0 && params.fillTimeS > params.maxFillTimeS) {
+  if (
+    params.useCustomProcessWindow &&
+    params.maxFillTimeS &&
+    params.maxFillTimeS > 0 &&
+    params.fillTimeS > params.maxFillTimeS
+  ) {
     warnings.push('当前充型时间超过最大允许时间，工作点在工艺窗口左侧（不可行）')
   }
 
-  const gateVelocityMps = gateAreaM2 > 0 ? qRequiredM3s / gateAreaM2 : 0
-  if (gateVelocityMps > 0 && gateVelocityMps > 120) warnings.push('浇口流速偏高，请确认浇口面积与充型时间')
-  if (gateVelocityMps > 0 && gateVelocityMps < 20) warnings.push('浇口流速偏低，请确认充型时间窗口')
+  if (vGateMps > 0 && vGateMps > 120) warnings.push('浇口流速偏高，请确认浇口面积与充型时间')
+  if (vGateMps > 0 && vGateMps < 20) warnings.push('浇口流速偏低，请确认充型时间窗口')
 
   const normalizedVolumeFromMass =
     params.densityKgM3 > 0 ? m3ToCm3(inputMassKg / params.densityKgM3) : params.castingVolumeCm3
@@ -271,31 +330,8 @@ export function computePQ2(rawParams: PQ2Params): PQ2ComputeResult {
     if (drift > 0.05) warnings.push('质量/体积联动存在较大差异，请检查密度或输入值')
   }
 
-  const sanitized: PQ2Params = {
-    ...params,
-    densityKgM3: clampNumber(params.densityKgM3, 1, 40000),
-    castingMassKg: clampNumber(params.castingMassKg, 0, 5000),
-    castingVolumeCm3: clampNumber(params.castingVolumeCm3, 0, 5e7),
-    fillTimeS: clampNumber(params.fillTimeS, 0, 60),
-    gateWidthMm: clampNumber(params.gateWidthMm, 0, 5000),
-    gateThicknessMm: clampNumber(params.gateThicknessMm, 0, 500),
-    gateAreaMm2: clampNumber(params.gateAreaMm2, 0, 5e6),
-    dischargeCoeff: clampNumber(params.dischargeCoeff, 0.01, 1),
-    extraLossMPa: clampNumber(params.extraLossMPa, 0, 400),
-    machineMaxPressureMPa: clampNumber(params.machineMaxPressureMPa, 0, 400),
-    plungerDiameterMm: clampNumber(params.plungerDiameterMm, 1, 500),
-    plungerMaxSpeedMps: clampNumber(params.plungerMaxSpeedMps, 0, 20),
-    // 工艺窗口参数
-    vGateMaxMps: clampNumber(params.vGateMaxMps, 10, 200),
-    vGateMinMps: clampNumber(params.vGateMinMps, 5, 100),
-    maxFillTimeS: clampNumber(params.maxFillTimeS ?? 0, 0, 60),
-    // 液压参数
-    hydraulicPressureMPa: clampNumber(params.hydraulicPressureMPa, 1, 500),
-    hydraulicCylinderDiameterMm: clampNumber(params.hydraulicCylinderDiameterMm, 1, 1000),
-  }
-
   return {
-    params: sanitized,
+    params,
     normalized,
     intermediate,
     points,

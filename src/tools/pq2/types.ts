@@ -64,7 +64,7 @@ export type PQ2Intermediate = {
   // 工艺窗口计算值
   pWindowMaxMPa: number
   pWindowMinMPa: number
-  qWindowMinLps: number
+  qWindowMinLps?: number
 }
 
 export type PQ2KeyPoints = {
@@ -75,7 +75,7 @@ export type PQ2KeyPoints = {
   processWindow?: {
     pMaxMPa: number
     pMinMPa: number
-    qMinLps: number
+    qMinLps?: number
   }
 }
 

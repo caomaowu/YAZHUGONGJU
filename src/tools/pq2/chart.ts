@@ -80,13 +80,16 @@ function buildFeasiblePolygon(result: PQ2ComputeResult): [number, number][] {
 
 export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: string): echarts.EChartsOption {
   const x = result.curve.map((d) => d.q2Lps2)
-  const xMax = Math.max(1, ...x)
   const machine = result.curve.map((d) => [d.q2Lps2, d.pMachineMPa] as [number, number])
   const die = result.curve.map((d) => [d.q2Lps2, d.pDieMPa] as [number, number])
 
   const operating = result.points.operating
   const intersect = result.points.intersect
   const processWindow = result.points.processWindow
+  const qMinLps = processWindow?.qMinLps
+  const qMinLps2 = typeof qMinLps === 'number' && qMinLps > 0 ? qMinLps * qMinLps : 0
+  const yMax = Math.max(1, ...result.curve.map((d) => Math.max(d.pMachineMPa, d.pDieMPa)))
+  const xMax = Math.max(1, ...x, qMinLps2 > 0 ? qMinLps2 * 1.05 : 0)
 
   // 工艺窗口边界数据
   const hasProcessWindow = processWindow && processWindow.pMaxMPa > 0 && processWindow.pMinMPa > 0
@@ -102,10 +105,10 @@ export function buildPQ2ChartOption(result: PQ2ComputeResult, themePrimary: stri
         [xMax, processWindow!.pMinMPa],
       ] as [number, number][]
     : []
-  const qMinLine = hasProcessWindow && processWindow!.qMinLps > 0
+  const qMinLine = hasProcessWindow && qMinLps2 > 0
     ? [
-        [processWindow!.qMinLps * processWindow!.qMinLps, 0],
-        [processWindow!.qMinLps * processWindow!.qMinLps, Math.max(...result.curve.map((d) => Math.max(d.pMachineMPa, d.pDieMPa)))],
+        [qMinLps2, 0],
+        [qMinLps2, yMax],
       ] as [number, number][]
     : []
 

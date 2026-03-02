@@ -54,6 +54,28 @@ const DEFAULT_PARAMS: PQ2Params = {
   hydraulicCylinderDiameterMm: 210, // mm (约21 cm)
 }
 
+function mergeDefinedParams(input?: Partial<PQ2Params>): Partial<PQ2Params> {
+  if (!input) return {}
+  const next: Partial<PQ2Params> = {}
+  for (const [key, value] of Object.entries(input) as [keyof PQ2Params, PQ2Params[keyof PQ2Params]][]) {
+    if (value !== undefined) next[key] = value
+  }
+  return next
+}
+
+function normalizeParams(input?: Partial<PQ2Params>): PQ2Params {
+  const merged: PQ2Params = {
+    ...DEFAULT_PARAMS,
+    ...mergeDefinedParams(input),
+  }
+  const material = getMaterialById(merged.materialId)
+  return {
+    ...merged,
+    materialId: material.id,
+    densityKgM3: merged.densityKgM3 > 0 ? merged.densityKgM3 : material.densityKgM3,
+  }
+}
+
 export function PQ2Page() {
   const { token } = theme.useToken()
   const [savedParams, setSavedParams] = useSharedValue<PQ2Params>('pq2', 'params', DEFAULT_PARAMS)
@@ -62,19 +84,12 @@ export function PQ2Page() {
   const [form] = Form.useForm<PQ2Params>()
   const chartRef = useRef<echarts.ECharts | null>(null)
 
-  const initialParams = useMemo(() => {
-    const base = savedParams ?? DEFAULT_PARAMS
-    const material = getMaterialById(base.materialId)
-    return {
-      ...base,
-      densityKgM3: base.densityKgM3 > 0 ? base.densityKgM3 : material.densityKgM3,
-    }
-  }, [savedParams])
+  const initialParams = useMemo(() => normalizeParams(savedParams), [savedParams])
 
   const params = Form.useWatch([], form) as PQ2Params | undefined
 
   const computeResult = useMemo(() => {
-    const current = params ?? initialParams
+    const current = normalizeParams(params ?? initialParams)
     return computePQ2(current)
   }, [initialParams, params])
 
@@ -99,7 +114,7 @@ export function PQ2Page() {
 
   const onExportJson = () => {
     const stamp = formatTimestampForFile(new Date())
-    const current = params ?? initialParams
+    const current = normalizeParams(params ?? initialParams)
     const payload = {
       tool: 'PQ2',
       exportedAt: new Date().toISOString(),
@@ -270,19 +285,39 @@ export function PQ2Page() {
             </Form.Item>
           </Space>
 
-          <Form.Item
-            label="最大浇口速度 (Vmax)"
-            name="vGateMaxMps"
-            rules={[{ required: true, type: 'number', min: 10 }]}
-          >
-            <InputNumber style={{ width: '100%' }} min={10} max={200} step={5} addonAfter="m/s" />
-          </Form.Item>
-          <Form.Item
-            label="最小浇口速度 (Vmin)"
-            name="vGateMinMps"
-            rules={[{ required: true, type: 'number', min: 5 }]}
-          >
-            <InputNumber style={{ width: '100%' }} min={5} max={100} step={5} addonAfter="m/s" />
+          <Form.Item noStyle shouldUpdate={(p, n) => p.useCustomProcessWindow !== n.useCustomProcessWindow}>
+            {({ getFieldValue }) => {
+              const useCustom = Boolean(getFieldValue('useCustomProcessWindow'))
+              if (!useCustom) {
+                return (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message={`已使用推荐工艺窗口：Vmax ${DEFAULT_PARAMS.vGateMaxMps} m/s，Vmin ${DEFAULT_PARAMS.vGateMinMps} m/s`}
+                    description="开启开关后可自定义工艺窗口边界。"
+                  />
+                )
+              }
+
+              return (
+                <>
+                  <Form.Item
+                    label="最大浇口速度 (Vmax)"
+                    name="vGateMaxMps"
+                    rules={[{ required: true, type: 'number', min: 10 }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={10} max={200} step={5} addonAfter="m/s" />
+                  </Form.Item>
+                  <Form.Item
+                    label="最小浇口速度 (Vmin)"
+                    name="vGateMinMps"
+                    rules={[{ required: true, type: 'number', min: 5 }]}
+                  >
+                    <InputNumber style={{ width: '100%' }} min={5} max={100} step={5} addonAfter="m/s" />
+                  </Form.Item>
+                </>
+              )
+            }}
           </Form.Item>
         </div>
       </Col>
@@ -294,12 +329,29 @@ export function PQ2Page() {
         >
           <InputNumber style={{ width: '100%' }} min={0} step={0.01} addonAfter="s" />
         </Form.Item>
-        <Form.Item
-          label="最大充型时间限制 (t_max)"
-          name="maxFillTimeS"
-          tooltip="用于确定工艺窗口的最小流量边界 Qmin。若设为0则不显示左边界。"
-        >
-          <InputNumber style={{ width: '100%' }} min={0} step={0.01} placeholder="可选" addonAfter="s" />
+        <Form.Item noStyle shouldUpdate={(p, n) => p.useCustomProcessWindow !== n.useCustomProcessWindow}>
+          {({ getFieldValue }) => {
+            const useCustom = Boolean(getFieldValue('useCustomProcessWindow'))
+            if (!useCustom) {
+              return (
+                <Alert
+                  type="info"
+                  showIcon
+                  message="Qmin 左边界默认关闭"
+                  description="开启开关后可通过 t_max 启用 Qmin 左边界。"
+                />
+              )
+            }
+            return (
+              <Form.Item
+                label="最大充型时间限制 (t_max)"
+                name="maxFillTimeS"
+                tooltip="用于确定工艺窗口的最小流量边界 Qmin。若设为0则不显示左边界。"
+              >
+                <InputNumber style={{ width: '100%' }} min={0} step={0.01} placeholder="可选" addonAfter="s" />
+              </Form.Item>
+            )
+          }}
         </Form.Item>
       </Col>
     </Row>
@@ -467,7 +519,7 @@ export function PQ2Page() {
               layout="vertical"
               initialValues={initialParams}
               onValuesChange={(_, next) => {
-                setSavedParams(next)
+                setSavedParams(normalizeParams(next))
               }}
             >
               <Tabs
@@ -590,7 +642,9 @@ export function PQ2Page() {
                         {computeResult.points.processWindow.pMinMPa.toFixed(2)} MPa
                       </Descriptions.Item>
                       <Descriptions.Item label="工艺窗口 Qmin">
-                        {computeResult.points.processWindow.qMinLps.toFixed(2)} L/s
+                        {typeof computeResult.points.processWindow.qMinLps === 'number'
+                          ? `${computeResult.points.processWindow.qMinLps.toFixed(2)} L/s`
+                          : '未启用'}
                       </Descriptions.Item>
                     </Descriptions>
                   </>

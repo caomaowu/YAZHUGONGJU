@@ -59,11 +59,56 @@ describe('pq2 compute', () => {
   })
 
   it('calculates process window boundaries', () => {
-    const result = computePQ2({ ...base, vGateMaxMps: 60, vGateMinMps: 30 })
+    const result = computePQ2({ ...base, useCustomProcessWindow: true, vGateMaxMps: 60, vGateMinMps: 30, maxFillTimeS: 0.08 })
     expect(result.errors).toEqual([])
     expect(result.points.processWindow).toBeDefined()
     expect(result.points.processWindow!.pMaxMPa).toBeGreaterThan(result.points.processWindow!.pMinMPa)
-    expect(result.points.processWindow!.qMinLps).toBeGreaterThan(0)
+    expect(result.points.processWindow!.qMinLps).toBeDefined()
+    expect(result.points.processWindow!.qMinLps!).toBeGreaterThan(0)
+  })
+
+  it('uses recommended process window when custom mode is disabled', () => {
+    const result = computePQ2({
+      ...base,
+      useCustomProcessWindow: false,
+      vGateMaxMps: 120,
+      vGateMinMps: 10,
+      maxFillTimeS: 0.08,
+    })
+    expect(result.errors).toEqual([])
+    expect(result.params.vGateMaxMps).toBe(60)
+    expect(result.params.vGateMinMps).toBe(30)
+    expect(result.params.maxFillTimeS).toBe(0)
+    expect(result.points.processWindow?.qMinLps).toBeUndefined()
+  })
+
+  it('does not render qmin boundary when maxFillTimeS is 0', () => {
+    const result = computePQ2({
+      ...base,
+      useCustomProcessWindow: true,
+      maxFillTimeS: 0,
+    })
+    expect(result.errors).toEqual([])
+    expect(result.points.processWindow?.qMinLps).toBeUndefined()
+  })
+
+  it('validates process window ordering in custom mode', () => {
+    const result = computePQ2({
+      ...base,
+      useCustomProcessWindow: true,
+      vGateMaxMps: 25,
+      vGateMinMps: 30,
+    })
+    expect(result.errors).toContain('工艺窗口要求 Vmax 必须大于 Vmin')
+  })
+
+  it('uses sanitized params as the source of truth for curve calculation', () => {
+    const result = computePQ2({
+      ...base,
+      machineMaxPressureMPa: 600,
+    })
+    expect(result.params.machineMaxPressureMPa).toBe(400)
+    expect(result.curve[0].pMachineMPa).toBeCloseTo(400, 6)
   })
 
   it('calculates machine pressure from hydraulic parameters', () => {

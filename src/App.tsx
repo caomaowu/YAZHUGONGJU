@@ -19,6 +19,10 @@ import { useAuth } from './core/auth/useAuth'
 import { LoginPage } from './components/auth/Login'
 import './App.css'
 
+function normalizeSearchText(value: string) {
+  return value.normalize('NFKC').toLowerCase().replace(/\s+/g, '')
+}
+
 function MainLayout() {
   const { path, navigate } = useHashPath()
   const [query, setQuery] = useState('')
@@ -78,9 +82,12 @@ function MainLayout() {
   }, [])
 
   const menuItems = useMemo(() => {
-    const q = query.trim()
+    const q = normalizeSearchText(query.trim())
     const list = (q
-      ? tools.filter((t) => t.title.includes(q) || t.navLabel.includes(q) || (t.description ?? '').includes(q))
+      ? tools.filter((t) => {
+          const candidates = [t.title, t.navLabel, t.description ?? '']
+          return candidates.some((text) => normalizeSearchText(text).includes(q))
+        })
       : tools).filter((t) => t.id !== 'ai')
       
     return list.map((t) => {
