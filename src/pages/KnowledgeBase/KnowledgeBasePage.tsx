@@ -23,8 +23,11 @@ import {
 import {
   CloudUploadOutlined,
   DeleteOutlined,
+  DoubleRightOutlined,
   DownloadOutlined,
+  DownOutlined,
   EditOutlined,
+  ExpandAltOutlined,
   FileImageOutlined,
   FileMarkdownOutlined,
   FilePdfOutlined,
@@ -32,10 +35,13 @@ import {
   FileWordOutlined,
   LeftOutlined,
   MenuFoldOutlined,
+  MenuUnfoldOutlined,
   MoreOutlined,
   ReloadOutlined,
   RightOutlined,
   SearchOutlined,
+  ShrinkOutlined,
+  UpOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../../core/auth/useAuth'
 import { PdfPreview } from './components/PdfPreview'
@@ -115,6 +121,9 @@ export function KnowledgeBasePage() {
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
   const [activeHitIndex, setActiveHitIndex] = useState(0)
   const [targetPdfPage, setTargetPdfPage] = useState<number>(1)
+  const [showSidePanel, setShowSidePanel] = useState(false)
+  const [showHeader, setShowHeader] = useState(true)
+  const [dockExpanded, setDockExpanded] = useState(false) // 新增：控制底部 Dock 展开/折叠
 
   const pollTimerRef = useRef<number | null>(null)
   const textHitRefs = useRef<Record<number, HTMLSpanElement | null>>({})
@@ -267,6 +276,9 @@ export function KnowledgeBasePage() {
       setActiveHitIndex(0)
       if (data.hits.length > 0) {
         setTargetPdfPage(Math.max(1, Number(data.hits[0].page) || 1))
+        setShowSidePanel(true)
+      } else {
+        setShowSidePanel(false)
       }
     } catch (e) {
       message.error(e instanceof Error ? e.message : '搜索失败')
@@ -307,6 +319,9 @@ export function KnowledgeBasePage() {
     setActiveHitIndex(0)
     setSearchError('')
     setSearchStatus('pending')
+    setShowSidePanel(false)
+    setShowHeader(true)
+    setDockExpanded(false)
   }
 
   const openPreview = async (it: LibraryItem) => {
@@ -320,6 +335,7 @@ export function KnowledgeBasePage() {
     setActiveHitIndex(0)
     setSearchError('')
     setSearchStatus(it.searchStatus || 'pending')
+    setShowSidePanel(false)
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
     setTargetPdfPage(1)
@@ -692,55 +708,149 @@ export function KnowledgeBasePage() {
         </Modal>
 
         <Drawer
-          title={
-            <Space size={8}>
-              <Button type="text" icon={<MenuFoldOutlined />} onClick={closePreview} />
-              <span>{previewItem ? normalizeDisplayName(previewItem.originalName) : '预览'}</span>
-            </Space>
-          }
+          title={null}
+          extra={null}
+          closable={false}
           open={!!previewItem}
           onClose={closePreview}
           mask={false}
           width={immersiveWidth}
-          styles={{ body: { padding: 0, background: token.colorBgLayout, height: 'calc(100vh - 56px)' } }}
-          extra={
-            previewItem ? (
-              <Space>
-                <Input
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  onPressEnter={() => void runSearch()}
-                  allowClear
-                  placeholder="全文检索关键词"
-                  style={{ width: 260 }}
-                  suffix={searching ? <Spin size="small" /> : null}
-                />
-                <Button icon={<SearchOutlined />} loading={searching} onClick={() => void runSearch()}>
-                  搜索
-                </Button>
-                <Button
-                  icon={<LeftOutlined />}
-                  disabled={!searchResult || searchResult.hits.length === 0}
-                  onClick={() => switchHit(-1)}
-                />
-                <Button
-                  icon={<RightOutlined />}
-                  disabled={!searchResult || searchResult.hits.length === 0}
-                  onClick={() => switchHit(1)}
-                />
-                <Typography.Text type="secondary">
-                  {searchResult && searchResult.hits.length > 0 ? `${activeHitIndex + 1}/${searchResult.hits.length}` : '0/0'}
-                </Typography.Text>
-                <Button icon={<DownloadOutlined />} onClick={() => void downloadItem(previewItem)}>
-                  下载
-                </Button>
-              </Space>
-            ) : null
-          }
+          styles={{ body: { padding: 0, background: token.colorBgLayout, height: '100%' } }}
         >
           {previewItem ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', height: '100%' }}>
-              <div style={{ height: '100%', overflow: 'auto', padding: 12 }}>
+            <div style={{ display: 'flex', height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {/* 底部悬浮 Dock 工具栏 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 24,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 100,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 8px',
+                  background: 'rgba(0, 0, 0, 0.65)',
+                  backdropFilter: 'blur(16px)',
+                  borderRadius: 24,
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  maxWidth: dockExpanded ? 600 : 'auto',
+                }}
+              >
+                {/* 基础按钮组 */}
+                <Button
+                  type="text"
+                  icon={<MenuFoldOutlined style={{ color: '#fff' }} />}
+                  onClick={closePreview}
+                  title="关闭预览"
+                  style={{ color: '#fff' }}
+                  size="small"
+                />
+
+                <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.2)', margin: '0 4px' }} />
+
+                {dockExpanded ? (
+                  <>
+                    <Input
+                      value={searchKeyword}
+                      onChange={(e) => setSearchKeyword(e.target.value)}
+                      onPressEnter={() => void runSearch()}
+                      allowClear
+                      placeholder="全文检索..."
+                      variant="borderless"
+                      size="small"
+                      style={{ width: 160, color: '#fff', background: 'rgba(255,255,255,0.1)', borderRadius: 4 }}
+                      suffix={searching ? <Spin size="small" /> : null}
+                    />
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<SearchOutlined style={{ color: '#fff' }} />}
+                      loading={searching}
+                      onClick={() => void runSearch()}
+                    />
+                    
+                    <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.2)', margin: '0 4px' }} />
+
+                    <Space.Compact size="small">
+                      <Button
+                        type="text"
+                        icon={<LeftOutlined style={{ color: '#fff' }} />}
+                        disabled={!searchResult || searchResult.hits.length === 0}
+                        onClick={() => switchHit(-1)}
+                      />
+                      <Button
+                        type="text"
+                        icon={<RightOutlined style={{ color: '#fff' }} />}
+                        disabled={!searchResult || searchResult.hits.length === 0}
+                        onClick={() => switchHit(1)}
+                      />
+                    </Space.Compact>
+                    
+                    {searchResult && searchResult.hits.length > 0 && (
+                       <Typography.Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, minWidth: 40, textAlign: 'center' }}>
+                        {activeHitIndex + 1}/{searchResult.hits.length}
+                      </Typography.Text>
+                    )}
+
+                    <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.2)', margin: '0 4px' }} />
+
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={showSidePanel ? <MenuFoldOutlined style={{ color: '#fff' }} /> : <MenuUnfoldOutlined style={{ color: '#fff' }} />}
+                      onClick={() => setShowSidePanel(!showSidePanel)}
+                      title={showSidePanel ? '收起结果' : '展开结果'}
+                      disabled={!searchResult}
+                    />
+                    
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<DownloadOutlined style={{ color: '#fff' }} />}
+                      onClick={() => void downloadItem(previewItem)}
+                    />
+                    
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<ShrinkOutlined style={{ color: '#fff' }} />}
+                      onClick={() => setDockExpanded(false)}
+                      title="收起工具栏"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Typography.Text 
+                       style={{ color: '#fff', maxWidth: 160, fontSize: 13 }} 
+                       ellipsis
+                       onClick={() => setDockExpanded(true)} // 点击文件名也能展开
+                    >
+                      {normalizeDisplayName(previewItem.originalName)}
+                    </Typography.Text>
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<ExpandAltOutlined style={{ color: '#fff' }} />}
+                      onClick={() => setDockExpanded(true)}
+                      title="展开工具栏"
+                    />
+                  </>
+                )}
+              </div>
+
+              <div
+                style={{
+                  flex: 1,
+                  height: '100%',
+                  overflow: 'auto',
+                  padding: 0, // 移除 padding，全屏显示
+                  transition: 'padding-top 0.3s ease',
+                }}
+              >
                 {searchStatus !== 'ready' ? (
                   <Alert
                     style={{ marginBottom: 12 }}
@@ -801,53 +911,77 @@ export function KnowledgeBasePage() {
               </div>
               <div
                 style={{
+                  width: 320,
+                  height: '100%',
                   borderLeft: `1px solid ${token.colorBorderSecondary}`,
                   background: token.colorBgContainer,
-                  height: '100%',
-                  overflow: 'auto',
-                  padding: 12,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  marginRight: showSidePanel ? 0 : -321,
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: showSidePanel ? '-4px 0 12px rgba(0,0,0,0.05)' : 'none',
+                  zIndex: 10,
                 }}
               >
-                <Typography.Title level={5} style={{ marginTop: 0 }}>
-                  命中结果
-                </Typography.Title>
-                {searchResult ? (
-                  <>
-                    <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
-                      总命中：{searchResult.totalHits}
-                      {searchResult.truncated ? '（已截断）' : ''}
-                    </Typography.Text>
-                    {searchResult.hits.length === 0 ? (
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未命中" />
-                    ) : (
-                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                        {searchResult.hits.map((hit, idx) => (
-                          <Card
-                            key={`${hit.page}-${idx}`}
-                            size="small"
-                            styles={{
-                              body: {
-                                padding: 10,
-                                border: idx === activeHitIndex ? `1px solid ${token.colorPrimary}` : undefined,
-                              },
-                            }}
-                            hoverable
-                            onClick={() => setActiveHitIndex(idx)}
-                          >
-                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                              第 {hit.page} 页 · {hit.source === 'ocr' ? 'OCR' : '文本层'}
-                            </Typography.Text>
-                            <Typography.Paragraph ellipsis={{ rows: 3 }} style={{ marginBottom: 0 }}>
-                              {hit.snippet}
-                            </Typography.Paragraph>
-                          </Card>
-                        ))}
-                      </Space>
-                    )}
-                  </>
-                ) : (
-                  <Typography.Text type="secondary">输入关键词开始搜索。</Typography.Text>
-                )}
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography.Text strong>命中结果 ({searchResult?.hits.length || 0})</Typography.Text>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<DoubleRightOutlined />}
+                    onClick={() => setShowSidePanel(false)}
+                  />
+                </div>
+                <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+                  {searchResult ? (
+                    <>
+                      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                        总命中：{searchResult.totalHits}
+                        {searchResult.truncated ? '（已截断）' : ''}
+                      </Typography.Text>
+                      {searchResult.hits.length === 0 ? (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未命中" />
+                      ) : (
+                        <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                          {searchResult.hits.map((hit, idx) => (
+                            <Card
+                              key={`${hit.page}-${idx}`}
+                              size="small"
+                              styles={{
+                                body: {
+                                  padding: 10,
+                                  border: idx === activeHitIndex ? `1px solid ${token.colorPrimary}` : undefined,
+                                },
+                              }}
+                              hoverable
+                              onClick={() => setActiveHitIndex(idx)}
+                            >
+                              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                第 {hit.page} 页 · {hit.source === 'ocr' ? 'OCR' : '文本层'}
+                              </Typography.Text>
+                              <Typography.Paragraph ellipsis={{ rows: 3 }} style={{ marginBottom: 0 }}>
+                                {hit.snippet}
+                              </Typography.Paragraph>
+                            </Card>
+                          ))}
+                        </Space>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ padding: 24, textAlign: 'center' }}>
+                      <Typography.Text type="secondary">输入关键词开始搜索</Typography.Text>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : null}
