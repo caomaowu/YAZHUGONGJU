@@ -26,6 +26,4 @@ dist-ssr
 
 server/chats.json
 server/uploads
-
 server/analytics_events.json
-server/chats.json
