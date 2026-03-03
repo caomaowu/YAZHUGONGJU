@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, Input, List, Button, Tag, Typography, Empty, Card, Row, Col, InputNumber, Divider, Form, Tooltip } from 'antd';
+import { Modal, Input, List, Button, Tag, Typography, Empty, Card, Row, Col, InputNumber, Divider, Form, Tooltip, Select } from 'antd';
 import { SearchOutlined, CheckCircleFilled, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { MachineModelSpecs } from '../../types/machine';
 
@@ -20,6 +20,13 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string>('全部');
+  
+  // Extract unique brands
+  const brands = useMemo(() => {
+    const brandSet = new Set(machineModels.map(m => m.brand || '力劲 (LK)'));
+    return ['全部', ...Array.from(brandSet)];
+  }, [machineModels]);
   
   // Batch Config State
   const [count, setCount] = useState<number>(1);
@@ -83,11 +90,12 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   };
 
   const filteredModels = useMemo(() => {
-    if (!searchQuery) return machineModels;
-    return machineModels.filter(m =>
-      m["型号"].toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [machineModels, searchQuery]);
+    return machineModels.filter(m => {
+      const matchQuery = !searchQuery || m["型号"].toLowerCase().includes(searchQuery.toLowerCase());
+      const matchBrand = selectedBrand === '全部' || (m.brand || '力劲 (LK)') === selectedBrand;
+      return matchQuery && matchBrand;
+    });
+  }, [machineModels, searchQuery, selectedBrand]);
 
   const handleCreate = () => {
     if (selectedModel && generatedNames.length > 0) {
@@ -127,8 +135,19 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
       <Row gutter={24} style={{ height: 500 }}>
         {/* Left Column: Model Selection */}
         <Col span={15} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
+            <Select
+              style={{ width: 150 }}
+              placeholder="品牌筛选"
+              value={selectedBrand}
+              onChange={setSelectedBrand}
+            >
+              {brands.map(brand => (
+                <Select.Option key={brand} value={brand}>{brand}</Select.Option>
+              ))}
+            </Select>
             <Input 
+              style={{ flex: 1 }}
               size="large" 
               prefix={<SearchOutlined />} 
               placeholder="搜索型号，如 DCC300..." 
@@ -163,6 +182,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                         </div>
                         <div style={{ marginTop: 8 }}>
                            <Tag color="purple">{Math.round(item["锁模力_KN"] / 10)}T</Tag>
+                           <Tag color="blue">{item.brand || '力劲 (LK)'}</Tag>
                         </div>
                         <div style={{ marginTop: 12, fontSize: 12, color: '#666' }}>
                            <div>锁模力: {item["锁模力_KN"]} kN</div>

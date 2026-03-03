@@ -55,6 +55,7 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
 
       form.setFieldsValue({
         model: selectedModel["型号"],
+        brand: selectedModel.brand || '力劲 (LK)',
         tonnage: selectedModel["锁模力_KN"] ? Math.round(selectedModel["锁模力_KN"] / 10) : 0, // Approx conversion KN -> Ton
         specs: {
           clampingForce: selectedModel["锁模力_KN"],

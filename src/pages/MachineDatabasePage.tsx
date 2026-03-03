@@ -196,7 +196,7 @@ export const MachineDatabasePage: React.FC = () => {
       const newMachine: DieCastingMachine = {
         id: `${Date.now()}-${index}-${Math.random().toString(36).substr(2, 5)}`,
         name: item.name,
-        brand: '力劲 (LK)', // Default from JSON source
+        brand: selectedModel?.brand || '力劲 (LK)', // Default from JSON source
         model: item.model,
         tonnage: selectedModel ? (selectedModel["锁模力_KN"] ? Math.round(selectedModel["锁模力_KN"] / 10) : 0) : 0,
         location: availableLocations[0] || '未分配',

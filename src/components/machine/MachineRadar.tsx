@@ -19,20 +19,26 @@ export const MachineRadar: React.FC<MachineRadarProps> = ({ machine, height = 30
       machine.specs.clampingForce,
       machine.specs.dieHeightMax,
       machine.specs.ejectionStroke,
-      (machine.specs.injectionRate || 0) * 1000, // Scale for visibility
+      machine.specs.injectionRate || 0, // Use actual value
       machine.specs.tieBarSpacing[0],
-      machine.tonnage * 10, // Scale for visibility
+      machine.tonnage, // Actual tonnage
     ];
 
     // Mock max values for normalization visualization
-    // In a real app these should be based on the max values of the dataset or standard
+    // We adjust max values based on the machine scale to prevent the radar from being too small or out of bounds
+    const clampingForceMax = Math.max(15000, machine.specs.clampingForce * 1.2);
+    const dieHeightMax = Math.max(1500, machine.specs.dieHeightMax * 1.2);
+    const ejectionStrokeMax = Math.max(500, machine.specs.ejectionStroke * 1.2);
+    const tieBarSpacingMax = Math.max(1500, machine.specs.tieBarSpacing[0] * 1.2);
+    const tonnageMax = Math.max(1500, machine.tonnage * 1.2);
+
     const indicator = [
-       { name: '锁模力', max: 15000 },
-       { name: '最大模厚', max: 1500 },
-       { name: '顶出行程', max: 500 },
-       { name: '射出速度', max: 10000 },
-       { name: '哥林柱距', max: 1500 },
-       { name: '吨位', max: 20000 },
+       { name: '锁模力', max: clampingForceMax },
+       { name: '最大模厚', max: dieHeightMax },
+       { name: '顶出行程', max: ejectionStrokeMax },
+       { name: '射出速度', max: 10 }, // 10 m/s as a reasonable max for most machines
+       { name: '哥林柱距', max: tieBarSpacingMax },
+       { name: '吨位', max: tonnageMax },
     ];
 
     const option: EChartsOption = {

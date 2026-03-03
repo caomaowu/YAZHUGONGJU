@@ -394,5 +394,113 @@
     "role": "admin",
     "ts": "2026-03-03T08:41:55.333Z",
     "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:57:21.639Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:57:45.436Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:57:46.406Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:58:18.669Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:59:04.395Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T09:02:00.769Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T09:02:01.693Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T09:02:02.909Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T09:05:13.851Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T09:08:24.439Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T09:12:28.490Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T09:13:39.921Z",
+    "day": "2026-03-03"
   }
 ]
