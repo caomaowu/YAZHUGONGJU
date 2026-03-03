@@ -77,6 +77,9 @@ type SearchResult = {
   truncated?: boolean
 }
 
+const UPLOAD_MAX_MB = 50
+const UPLOAD_MAX_BYTES = UPLOAD_MAX_MB * 1024 * 1024
+
 function normalizeDisplayName(name: string) {
   const value = String(name || '').trim()
   const m = value.match(/^(.+)(\.[a-z0-9]{1,8})\2$/i)
@@ -1036,6 +1039,7 @@ function UploadContent(props: {
         try {
           setUploading(true)
           const file = options.file as File
+          if (file.size > UPLOAD_MAX_BYTES) throw new Error(`单个文件不能超过 ${UPLOAD_MAX_MB}MB`)
           const dataUrl = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onload = () => resolve(String(reader.result || ''))
@@ -1047,7 +1051,16 @@ function UploadContent(props: {
             headers: { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileName: file.name, mimeType: file.type, base64: dataUrl }),
           })
-          if (!res.ok) throw new Error('上传失败')
+          if (!res.ok) {
+            let errText = '上传失败'
+            try {
+              const payload = await res.json()
+              if (payload?.error) errText = String(payload.error)
+            } catch {
+              errText = `上传失败（${res.status}）`
+            }
+            throw new Error(errText)
+          }
           options.onSuccess?.(await res.json(), file)
           onUploaded()
         } catch (e) {
@@ -1063,7 +1076,7 @@ function UploadContent(props: {
           拖拽文件到此处上传
         </Typography.Title>
         <Typography.Text type="secondary">
-          支持 PDF / Word(.docx) / 图片 / Markdown / 文本。上传与删除需要管理员权限。
+          支持 PDF / Word(.docx) / 图片 / Markdown / 文本，单文件最大 {UPLOAD_MAX_MB}MB。上传与删除需要管理员权限。
         </Typography.Text>
       </div>
     </Upload.Dragger>

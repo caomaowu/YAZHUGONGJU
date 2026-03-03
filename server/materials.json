@@ -1,0 +1,29 @@
+[
+  {
+    "id": "ADC12",
+    "name": "ADC12",
+    "category": "aluminum",
+    "densityKgM3": 2650,
+    "standard": "JIS",
+    "notes": "",
+    "updatedAt": "2026-03-03T00:00:00.000Z"
+  },
+  {
+    "id": "ALSi9Cu3",
+    "name": "AlSi9Cu3",
+    "category": "aluminum",
+    "densityKgM3": 2680,
+    "standard": "EN",
+    "notes": "",
+    "updatedAt": "2026-03-03T00:00:00.000Z"
+  },
+  {
+    "id": "AZ91D",
+    "name": "AZ91D",
+    "category": "magnesium",
+    "densityKgM3": 1800,
+    "standard": "ASTM",
+    "notes": "",
+    "updatedAt": "2026-03-03T00:00:00.000Z"
+  }
+]

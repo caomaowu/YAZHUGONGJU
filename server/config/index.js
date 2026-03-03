@@ -10,6 +10,17 @@ export const PORT = Number(process.env.PORT || 3001);
 export const SECRET_KEY = process.env.JWT_SECRET;
 export const CORS_ORIGIN = process.env.CORS_ORIGIN || '';
 
+function toPositiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
+export const LIBRARY_MAX_FILE_MB = toPositiveInt(process.env.LIBRARY_MAX_FILE_MB, 50);
+export const LIBRARY_MAX_FILE_BYTES = LIBRARY_MAX_FILE_MB * 1024 * 1024;
+export const LIBRARY_UPLOAD_BODY_LIMIT_MB = Math.max(10, Math.ceil(LIBRARY_MAX_FILE_MB * 1.5));
+export const LIBRARY_UPLOAD_BODY_LIMIT = `${LIBRARY_UPLOAD_BODY_LIMIT_MB}mb`;
+
 // Data file paths
 export const DATA_FILE = path.join(SERVER_ROOT, 'machines.json');
 export const LOCATIONS_FILE = path.join(SERVER_ROOT, 'locations.json');

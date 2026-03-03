@@ -5,6 +5,7 @@ import { DashboardPage } from '../pages/DashboardPage'
 import { PQ2Page } from '../pages/PQ2Page'
 import { FillingSimulationPage } from '../pages/FillingSimulationPage'
 import { MachineDatabasePage } from '../pages/MachineDatabasePage'
+import { MaterialsDatabasePage } from '../pages/MaterialsDatabasePage'
 import { UserManagementPage } from '../pages/UserManagementPage'
 import { AIKnowledgeBasePage } from '../pages/AIKnowledgeBase/AIKnowledgeBasePage'
 import { KnowledgeBasePage } from '../pages/KnowledgeBase/KnowledgeBasePage'
@@ -29,6 +30,16 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <DatabaseOutlined />,
       order: 15,
       element: <MachineDatabasePage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
+    },
+    {
+      id: 'materials',
+      title: '材料数据库',
+      navLabel: '材料数据库',
+      route: '/materials',
+      icon: <DatabaseOutlined />,
+      order: 16,
+      element: <MaterialsDatabasePage />,
       allowedRoles: ['admin', 'engineer', 'viewer'],
     },
     {

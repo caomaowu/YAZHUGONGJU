@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import mammoth from 'mammoth';
-import { LIBRARY_UPLOAD_DIR } from '../config/index.js';
+import { LIBRARY_UPLOAD_DIR, LIBRARY_MAX_FILE_BYTES, LIBRARY_MAX_FILE_MB } from '../config/index.js';
 import {
   buildContentDisposition,
   inferLibraryType,
@@ -80,9 +80,10 @@ export const uploadLibraryFile = async (req, res) => {
     if (!b64) return res.status(400).json({ error: 'Missing base64' });
 
     const buffer = Buffer.from(b64, 'base64');
-    const maxBytes = 20 * 1024 * 1024;
     if (!buffer.length) return res.status(400).json({ error: 'Empty file' });
-    if (buffer.length > maxBytes) return res.status(413).json({ error: 'File too large' });
+    if (buffer.length > LIBRARY_MAX_FILE_BYTES) {
+      return res.status(413).json({ error: `File too large, max ${LIBRARY_MAX_FILE_MB}MB` });
+    }
 
     const id = randomUUID();
     const ext = safeFileExt(originalName);

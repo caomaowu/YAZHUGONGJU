@@ -17,9 +17,8 @@ export function PdfPreview({ fileUrl, targetPage }: PdfPreviewProps) {
 
   // 监听 fileUrl 变化，重置 loading 状态
   useEffect(() => {
-    setLoading(true)
-    // 使用 requestAnimationFrame 避免状态更新过快导致的闪烁
     const timer = requestAnimationFrame(() => {
+      setLoading(true)
       setInternalUrl(fileUrl)
     })
     return () => cancelAnimationFrame(timer)
@@ -34,7 +33,7 @@ export function PdfPreview({ fileUrl, targetPage }: PdfPreviewProps) {
     // 我们手动替换 location，确保跳转生效
     try {
       iframeRef.current.contentWindow?.location.replace(newSrc)
-    } catch (e) {
+    } catch {
       // 跨域时无法访问 contentWindow，降级为直接修改 src
       // 但对于同源 blob URL，上述方法通常有效
       iframeRef.current.src = newSrc

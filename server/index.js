@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 
 import { corsMiddleware } from './middleware/cors.js';
-import { NODE_ENV, PORT, SECRET_KEY, CORS_ORIGIN } from './config/index.js';
+import { NODE_ENV, PORT, SECRET_KEY, CORS_ORIGIN, LIBRARY_UPLOAD_BODY_LIMIT } from './config/index.js';
 import { initializeData } from './utils/init.js';
 import { nowIso } from './utils/helpers.js';
 import { bootstrapLibraryIndexing } from './services/libraryIndexService.js';
@@ -32,7 +32,7 @@ if (NODE_ENV === 'production' && !CORS_ORIGIN.trim()) {
 
 // Middleware
 app.use(corsMiddleware);
-app.use(bodyParser.json({ limit: '50mb' })); // Allow large payloads for base64 images
+app.use(bodyParser.json({ limit: LIBRARY_UPLOAD_BODY_LIMIT }));
 
 // Initialize Data
 initializeData();

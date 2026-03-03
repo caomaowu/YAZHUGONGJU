@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { CSSProperties } from 'react'
 import { useEffect, useRef } from 'react'
 import * as echarts from 'echarts'
@@ -30,7 +31,7 @@ export type EChartProps = {
   onChartReady?: (chart: echarts.ECharts) => void
 }
 
-export function EChart({
+export const EChart = memo(function EChart({
   option,
   className,
   style,
@@ -110,4 +111,4 @@ export function EChart({
   }, [loading])
 
   return <div ref={containerRef} className={className} style={{ width: '100%', height: '100%', ...style }} />
-}
+})
