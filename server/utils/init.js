@@ -5,6 +5,7 @@ import {
   USERS_FILE, 
   ROLES_FILE, 
   CHATS_FILE, 
+  ANALYTICS_EVENTS_FILE,
   LIBRARY_FILE, 
   LIBRARY_UPLOAD_DIR,
   LIBRARY_INDEX_DIR
@@ -73,6 +74,11 @@ export const initializeData = async () => {
   // Ensure chats file exists
   if (!fs.existsSync(CHATS_FILE)) {
     fs.writeJsonSync(CHATS_FILE, [], { spaces: 2 });
+  }
+
+  // Ensure analytics events file exists
+  if (!fs.existsSync(ANALYTICS_EVENTS_FILE)) {
+    fs.writeJsonSync(ANALYTICS_EVENTS_FILE, [], { spaces: 2 });
   }
   
   // Ensure library file exists

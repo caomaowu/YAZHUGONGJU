@@ -25,7 +25,6 @@ import {
   DeleteOutlined,
   DoubleRightOutlined,
   DownloadOutlined,
-  DownOutlined,
   EditOutlined,
   ExpandAltOutlined,
   FileImageOutlined,
@@ -41,7 +40,6 @@ import {
   RightOutlined,
   SearchOutlined,
   ShrinkOutlined,
-  UpOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../../core/auth/useAuth'
 import { PdfPreview } from './components/PdfPreview'
@@ -122,7 +120,6 @@ export function KnowledgeBasePage() {
   const [activeHitIndex, setActiveHitIndex] = useState(0)
   const [targetPdfPage, setTargetPdfPage] = useState<number>(1)
   const [showSidePanel, setShowSidePanel] = useState(false)
-  const [showHeader, setShowHeader] = useState(true)
   const [dockExpanded, setDockExpanded] = useState(false) // 新增：控制底部 Dock 展开/折叠
 
   const pollTimerRef = useRef<number | null>(null)
@@ -320,7 +317,6 @@ export function KnowledgeBasePage() {
     setSearchError('')
     setSearchStatus('pending')
     setShowSidePanel(false)
-    setShowHeader(true)
     setDockExpanded(false)
   }
 

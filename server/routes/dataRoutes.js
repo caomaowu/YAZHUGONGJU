@@ -17,7 +17,9 @@ import {
   saveMachines,
   getLocations,
   saveLocations,
-  getMachineModels
+  getMachineModels,
+  trackAnalyticsEvent,
+  getAnalyticsOverview
 } from '../controllers/dataController.js';
 
 const router = express.Router();
@@ -50,5 +52,9 @@ router.post('/locations', saveLocations);
 
 // Machine Models
 router.get('/machine-models', getMachineModels);
+
+// Analytics
+router.post('/analytics/track', authenticateToken, trackAnalyticsEvent);
+router.get('/analytics/overview', authenticateToken, getAnalyticsOverview);
 
 export default router;

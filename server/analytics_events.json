@@ -1,0 +1,398 @@
+[
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:27:11.340Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:28:43.521Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "ai-knowledge",
+    "route": "/ai-knowledge",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:28:52.128Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:28:53.651Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "filling-simulation",
+    "route": "/filling-simulation",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:10.870Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:12.158Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:15.491Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:16.353Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "pq2",
+    "route": "/pq2",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:18.637Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "filling-simulation",
+    "route": "/filling-simulation",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:20.315Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "pq2",
+    "route": "/pq2",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:21.660Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "filling-simulation",
+    "route": "/filling-simulation",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:23.249Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "pq2",
+    "route": "/pq2",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:24.114Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "filling-simulation",
+    "route": "/filling-simulation",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:24.884Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "pq2",
+    "route": "/pq2",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:30.285Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:34.502Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:57.333Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:29:58.752Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:30:23.096Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:30:24.095Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "users",
+    "route": "/users",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:30:37.877Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "",
+    "route": "/dashboard",
+    "username": "123",
+    "role": "12",
+    "ts": "2026-03-03T08:31:05.267Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "123",
+    "role": "12",
+    "ts": "2026-03-03T08:31:05.319Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "123",
+    "role": "12",
+    "ts": "2026-03-03T08:31:12.388Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "123",
+    "role": "12",
+    "ts": "2026-03-03T08:31:13.107Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "123",
+    "role": "12",
+    "ts": "2026-03-03T08:31:15.898Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "123",
+    "role": "12",
+    "ts": "2026-03-03T08:31:21.811Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "123",
+    "role": "12",
+    "ts": "2026-03-03T08:31:22.258Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "",
+    "route": "/dashboard",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:31:29.632Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:31:29.689Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "ai-knowledge",
+    "route": "/ai-knowledge",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:31:31.652Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "users",
+    "route": "/users",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:31:32.219Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "ai-knowledge",
+    "route": "/ai-knowledge",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:31:34.677Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "pq2",
+    "route": "/pq2",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:40:29.651Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:40:36.066Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:40:37.231Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:40:38.122Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:40:38.650Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:40:42.008Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:41:44.421Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "dashboard",
+    "route": "/dashboard",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:41:46.152Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:41:53.854Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "knowledge-base",
+    "route": "/knowledge-base",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:41:54.534Z",
+    "day": "2026-03-03"
+  },
+  {
+    "eventType": "page_view",
+    "toolId": "machines",
+    "route": "/machines",
+    "username": "admin",
+    "role": "admin",
+    "ts": "2026-03-03T08:41:55.333Z",
+    "day": "2026-03-03"
+  }
+]

@@ -53,7 +53,8 @@
     "name": "12233",
     "permissions": [
       "dashboard",
-      "machines"
+      "machines",
+      "knowledge-base"
     ],
     "canEdit": false,
     "canDelete": false

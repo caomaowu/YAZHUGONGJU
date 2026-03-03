@@ -1,19 +1,66 @@
-import { useMemo } from 'react'
-import { Button, Card, Progress, Segmented, Space, Statistic, Tag, Typography, theme } from 'antd'
-import { LineChartOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { useEffect, useMemo, useState } from 'react'
+import { Alert, Button, Card, Segmented, Space, Spin, Statistic, Table, Tag, Typography, theme } from 'antd'
+import { BarChartOutlined, LineChartOutlined, ThunderboltOutlined, UserOutlined } from '@ant-design/icons'
 import * as echarts from 'echarts'
 import { EChart } from '../components/charts/EChart'
 import { useHashPath } from '../core/router/hash'
 import { useSharedValue } from '../core/state/hooks'
+import { useAuth } from '../core/auth/useAuth'
+
+type AnalyticsOverview = {
+  days: number
+  range: { start: string; end: string }
+  totals: { pv: number; uv: number; perUser: number }
+  today: { day: string; pv: number; uv: number }
+  trend: Array<{ day: string; pv: number; uv: number }>
+  topTools: Array<{ toolId: string; count: number; ratio: number }>
+}
+
+const TOOL_LABEL_MAP: Record<string, string> = {
+  dashboard: '工作台',
+  machines: '设备数据库',
+  'knowledge-base': '知识库',
+  pq2: 'PQ² 图',
+  'filling-simulation': '压射模拟',
+  'ai-knowledge': 'AI助手',
+  users: '用户管理',
+}
 
 export function DashboardPage() {
   const { token } = theme.useToken()
   const { navigate } = useHashPath()
+  const { token: authToken } = useAuth()
   const [machineName] = useSharedValue<string>('global', 'machineName', '未设置')
+  const [days, setDays] = useState<7 | 30>(7)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null)
+
+  useEffect(() => {
+    if (!authToken) return
+    const load = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const res = await fetch(`/api/analytics/overview?days=${days}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        })
+        if (!res.ok) throw new Error('获取统计数据失败')
+        const data = (await res.json()) as AnalyticsOverview
+        setOverview(data)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '获取统计数据失败')
+      } finally {
+        setLoading(false)
+      }
+    }
+    void load()
+  }, [authToken, days])
 
   const chartOption = useMemo<echarts.EChartsOption>(() => {
-    const x = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-    const y = [12, 16, 14, 18, 22, 20, 24]
+    const x = (overview?.trend || []).map((it) => it.day.slice(5))
+    const pv = (overview?.trend || []).map((it) => it.pv)
+    const uv = (overview?.trend || []).map((it) => it.uv)
 
     return {
       animationDuration: 700,
@@ -34,11 +81,11 @@ export function DashboardPage() {
       },
       series: [
         {
-          name: '工况评分',
+          name: '访问次数(PV)',
           type: 'line',
           smooth: true,
           showSymbol: false,
-          data: y,
+          data: pv,
           lineStyle: { width: 3, color: token.colorPrimary },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -47,9 +94,29 @@ export function DashboardPage() {
             ]),
           },
         },
+        {
+          name: '访问人数(UV)',
+          type: 'line',
+          smooth: true,
+          showSymbol: false,
+          data: uv,
+          lineStyle: { width: 2, color: '#22c55e' },
+        },
       ],
     }
-  }, [token.colorPrimary])
+  }, [overview?.trend, token.colorPrimary])
+
+  const topToolsData = useMemo(
+    () =>
+      (overview?.topTools || []).map((it, index) => ({
+        key: it.toolId,
+        rank: index + 1,
+        toolName: TOOL_LABEL_MAP[it.toolId] || it.toolId,
+        count: it.count,
+        ratio: `${it.ratio}%`,
+      })),
+    [overview?.topTools]
+  )
 
   return (
     <>
@@ -63,10 +130,11 @@ export function DashboardPage() {
         <Space wrap size={10}>
           <Segmented
             options={[
-              { label: '概览', value: 'overview' },
-              { label: '趋势', value: 'trend' },
-              { label: '记录', value: 'history' },
+              { label: '近7天', value: 7 },
+              { label: '近30天', value: 30 },
             ]}
+            value={days}
+            onChange={(v) => setDays(v as 7 | 30)}
             size="small"
           />
           <Button type="primary" icon={<ThunderboltOutlined />} onClick={() => navigate('/pq2')}>
@@ -79,47 +147,57 @@ export function DashboardPage() {
         <div className="cardGrid">
           <Card
             className="softCard span8"
-            title="本周趋势（ECharts 封装示例）"
-            extra={<Tag color="purple">Reusable</Tag>}
+            title={`访问趋势（${overview?.range.start || '-'} ~ ${overview?.range.end || '-'}）`}
+            extra={<Tag color="purple">Analytics</Tag>}
           >
             <div className="chartWrap">
-              <EChart option={chartOption} style={{ width: '100%', height: '100%' }} />
+              {loading ? <Spin /> : <EChart option={chartOption} style={{ width: '100%', height: '100%' }} />}
             </div>
+            {error ? <Alert type="error" showIcon message={error} style={{ marginTop: 12 }} /> : null}
           </Card>
 
-          <Card className="softCard span4" title="快捷入口">
+          <Card className="softCard span4" title="今日访问">
             <Space direction="vertical" size={10} style={{ width: '100%' }}>
-              <Button block type="primary" icon={<LineChartOutlined />} onClick={() => navigate('/pq2')}>
-                新建 PQ² 计算
-              </Button>
-              <div className="pill">
-                <Typography.Text type="secondary">今日专注</Typography.Text>
-                <Progress percent={68} strokeColor={token.colorPrimary} trailColor="rgba(0,0,0,0.04)" />
+              <div className="pill" style={{ width: '100%' }}>
+                <Statistic title="访问次数（PV）" value={overview?.today.pv || 0} prefix={<BarChartOutlined />} />
+              </div>
+              <div className="pill" style={{ width: '100%' }}>
+                <Statistic title="访问人数（UV）" value={overview?.today.uv || 0} prefix={<UserOutlined />} />
               </div>
             </Space>
           </Card>
 
-          <Card className="softCard span4" title="运行状态">
+          <Card className="softCard span4" title="总体统计">
             <div className="metricRow">
-              <div className="pill">
-                <Statistic title="计算次数" value={26} />
+              <div className="pill" style={{ width: '100%' }}>
+                <Statistic title="总访问次数（PV）" value={overview?.totals.pv || 0} />
               </div>
             </div>
             <div style={{ height: 10 }} />
-            <div className="pill">
-              <Typography.Text type="secondary">质量评分</Typography.Text>
-              <Progress
-                percent={92}
-                strokeColor={{
-                  '0%': '#8B5CF6',
-                  '100%': '#EC4899',
-                }}
-                trailColor="rgba(0,0,0,0.04)"
-              />
+            <div className="pill" style={{ width: '100%' }}>
+              <Statistic title="总访问人数（UV）" value={overview?.totals.uv || 0} />
+            </div>
+            <div style={{ height: 10 }} />
+            <div className="pill" style={{ width: '100%' }}>
+              <Statistic title="人均访问次数" value={overview?.totals.perUser || 0} precision={2} />
             </div>
           </Card>
 
-          <Card className="softCard span8" title="共享状态（示例）">
+          <Card className="softCard span8" title="热门访问功能 Top">
+            <Table
+              size="small"
+              pagination={false}
+              dataSource={topToolsData}
+              columns={[
+                { title: '排名', dataIndex: 'rank', width: 72 },
+                { title: '功能', dataIndex: 'toolName' },
+                { title: '次数', dataIndex: 'count', width: 96 },
+                { title: '占比', dataIndex: 'ratio', width: 96 },
+              ]}
+            />
+          </Card>
+
+          <Card className="softCard span8" title="共享状态">
             <Typography.Paragraph style={{ marginBottom: 6 }} type="secondary">
               当前机台名称（global.machineName）
             </Typography.Paragraph>
@@ -130,6 +208,17 @@ export function DashboardPage() {
             <Typography.Paragraph style={{ marginBottom: 0 }} type="secondary">
               可在「设置」中修改，其他工具页面会自动刷新。
             </Typography.Paragraph>
+          </Card>
+
+          <Card className="softCard span4" title="快捷入口">
+            <Space direction="vertical" size={10} style={{ width: '100%' }}>
+              <Button block type="primary" icon={<LineChartOutlined />} onClick={() => navigate('/pq2')}>
+                新建 PQ² 计算
+              </Button>
+              <Button block icon={<ThunderboltOutlined />} onClick={() => navigate('/ai-knowledge')}>
+                打开 AI 助手
+              </Button>
+            </Space>
           </Card>
         </div>
       </div>

@@ -7,9 +7,32 @@ import {
   MODELS_FILE, 
   USERS_FILE, 
   ROLES_FILE, 
-  CHATS_FILE 
+  CHATS_FILE,
+  ANALYTICS_EVENTS_FILE
 } from '../config/index.js';
 import { readJsonWithDefault } from '../utils/helpers.js';
+
+const ANALYTICS_MAX_EVENTS = 100000;
+const ANALYTICS_MAX_DAYS = 90;
+
+function toIsoDay(input) {
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
+}
+
+function getRecentIsoDays(days) {
+  const count = Math.min(Math.max(Number(days) || 7, 1), ANALYTICS_MAX_DAYS);
+  const end = new Date();
+  end.setUTCHours(0, 0, 0, 0);
+  const list = [];
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const d = new Date(end);
+    d.setUTCDate(end.getUTCDate() - i);
+    list.push(d.toISOString().slice(0, 10));
+  }
+  return list;
+}
 
 // --- Roles ---
 export const getRoles = async (req, res) => {
@@ -297,5 +320,126 @@ export const getMachineModels = async (req, res) => {
   } catch (error) {
     console.error('Error reading machine models:', error);
     res.status(500).json({ error: 'Failed to read machine models data' });
+  }
+};
+
+// --- Analytics ---
+export const trackAnalyticsEvent = async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const eventType = String(payload.eventType || '').trim() || 'page_view';
+    const toolId = String(payload.toolId || '').trim().slice(0, 64);
+    const route = String(payload.route || '').trim().slice(0, 128);
+    const ts = payload.ts ? new Date(payload.ts).toISOString() : new Date().toISOString();
+    const username = String(req.user?.username || '').trim();
+    const role = String(req.user?.role || '').trim();
+
+    if (!username) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    if (!toolId && !route) {
+      return res.status(400).json({ error: 'Missing toolId or route' });
+    }
+
+    const events = await readJsonWithDefault(ANALYTICS_EVENTS_FILE, []);
+    const list = Array.isArray(events) ? events : [];
+    list.push({
+      eventType,
+      toolId,
+      route,
+      username,
+      role,
+      ts,
+      day: toIsoDay(ts),
+    });
+
+    const trimmed = list.length > ANALYTICS_MAX_EVENTS ? list.slice(-ANALYTICS_MAX_EVENTS) : list;
+    await fs.writeJson(ANALYTICS_EVENTS_FILE, trimmed, { spaces: 2 });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Track analytics error:', error);
+    res.status(500).json({ error: 'Failed to track analytics event' });
+  }
+};
+
+export const getAnalyticsOverview = async (req, res) => {
+  try {
+    const days = Math.min(Math.max(Number(req.query.days) || 7, 1), ANALYTICS_MAX_DAYS);
+    const dayList = getRecentIsoDays(days);
+    const daySet = new Set(dayList);
+    const today = dayList[dayList.length - 1];
+
+    const raw = await readJsonWithDefault(ANALYTICS_EVENTS_FILE, []);
+    const events = (Array.isArray(raw) ? raw : []).filter((it) => daySet.has(String(it?.day || toIsoDay(it?.ts))));
+
+    const trendMap = new Map(dayList.map((d) => [d, { pv: 0, users: new Set() }]));
+    const topMap = new Map();
+    const totalUsers = new Set();
+    const todayUsers = new Set();
+    let totalPv = 0;
+    let todayPv = 0;
+
+    for (const it of events) {
+      const day = String(it?.day || toIsoDay(it?.ts));
+      if (!daySet.has(day)) continue;
+      const username = String(it?.username || '').trim();
+      const toolKey = String(it?.toolId || it?.route || 'unknown').trim() || 'unknown';
+
+      const point = trendMap.get(day);
+      if (point) {
+        point.pv += 1;
+        if (username) point.users.add(username);
+      }
+      totalPv += 1;
+      if (username) totalUsers.add(username);
+
+      if (day === today) {
+        todayPv += 1;
+        if (username) todayUsers.add(username);
+      }
+
+      topMap.set(toolKey, (topMap.get(toolKey) || 0) + 1);
+    }
+
+    const trend = dayList.map((day) => {
+      const point = trendMap.get(day);
+      return {
+        day,
+        pv: point?.pv || 0,
+        uv: point?.users?.size || 0,
+      };
+    });
+
+    const topTools = Array.from(topMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([toolId, count]) => ({
+        toolId,
+        count,
+        ratio: totalPv > 0 ? Number(((count / totalPv) * 100).toFixed(1)) : 0,
+      }));
+
+    res.json({
+      days,
+      range: {
+        start: dayList[0],
+        end: dayList[dayList.length - 1],
+      },
+      totals: {
+        pv: totalPv,
+        uv: totalUsers.size,
+        perUser: totalUsers.size > 0 ? Number((totalPv / totalUsers.size).toFixed(2)) : 0,
+      },
+      today: {
+        day: today,
+        pv: todayPv,
+        uv: todayUsers.size,
+      },
+      trend,
+      topTools,
+    });
+  } catch (error) {
+    console.error('Get analytics overview error:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics overview' });
   }
 };

@@ -29,7 +29,7 @@ function MainLayout() {
   const { theme } = useTheme()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [kbImmersiveMode, setKbImmersiveMode] = useState(false)
-  const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth()
+  const { user, token: authToken, isAuthenticated, isLoading, logout, hasPermission } = useAuth()
   const isAiMode = path === '/ai'
 
   const allTools = useMemo(() => builtinToolRegistry.list(), [])
@@ -80,6 +80,29 @@ function MainLayout() {
       window.removeEventListener('kb-immersive-change', onKbImmersiveChange as EventListener)
     }
   }, [])
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !authToken) return
+    const route = String(path || '').trim()
+    const toolId = String(activeTool?.id || '').trim()
+    if (!route && !toolId) return
+
+    const payload = {
+      eventType: 'page_view',
+      route,
+      toolId,
+      ts: new Date().toISOString(),
+    }
+
+    void fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify(payload),
+    }).catch(() => {})
+  }, [activeTool?.id, authToken, isAuthenticated, isLoading, path])
 
   const menuItems = useMemo(() => {
     const q = normalizeSearchText(query.trim())

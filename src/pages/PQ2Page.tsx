@@ -56,11 +56,9 @@ const DEFAULT_PARAMS: PQ2Params = {
 
 function mergeDefinedParams(input?: Partial<PQ2Params>): Partial<PQ2Params> {
   if (!input) return {}
-  const next: Partial<PQ2Params> = {}
-  for (const [key, value] of Object.entries(input) as [keyof PQ2Params, PQ2Params[keyof PQ2Params]][]) {
-    if (value !== undefined) next[key] = value
-  }
-  return next
+  return Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined)
+  ) as Partial<PQ2Params>
 }
 
 function normalizeParams(input?: Partial<PQ2Params>): PQ2Params {
