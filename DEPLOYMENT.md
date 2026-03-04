@@ -23,6 +23,7 @@ JWT_SECRET=replace-with-strong-secret
 CORS_ORIGIN=https://your-domain.com
 LIBRARY_MAX_FILE_MB=150
 LIBRARY_TOTAL_MAX_MB=2048
+LIBRARY_INDEX_TIMEOUT_SEC=1800
 VITE_API_BASE_URL=/api
 APP_DOMAIN=your-domain.com
 APP_DIR=/opt/diecasting-app
@@ -33,6 +34,7 @@ APP_DIR=/opt/diecasting-app
 - `CORS_ORIGIN` 必须为你的正式域名（可逗号分隔多个域名）。
 - `LIBRARY_MAX_FILE_MB` 为知识库单文件上传上限（MB），需与 Nginx `client_max_body_size` 对齐。
 - `LIBRARY_TOTAL_MAX_MB` 为知识库总容量上限（MB），超过后新上传会被拒绝。
+- `LIBRARY_INDEX_TIMEOUT_SEC` 为单个文件索引超时（秒），大文件/OCR场景建议设置为 `1800` 或更高。
 
 ## 3. Nginx 反向代理
 

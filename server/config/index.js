@@ -20,6 +20,7 @@ export const LIBRARY_MAX_FILE_MB = toPositiveInt(process.env.LIBRARY_MAX_FILE_MB
 export const LIBRARY_MAX_FILE_BYTES = LIBRARY_MAX_FILE_MB * 1024 * 1024;
 export const LIBRARY_TOTAL_MAX_MB = toPositiveInt(process.env.LIBRARY_TOTAL_MAX_MB, 2048);
 export const LIBRARY_TOTAL_MAX_BYTES = LIBRARY_TOTAL_MAX_MB * 1024 * 1024;
+export const LIBRARY_INDEX_TIMEOUT_SEC = toPositiveInt(process.env.LIBRARY_INDEX_TIMEOUT_SEC, 1800);
 export const LIBRARY_UPLOAD_BODY_LIMIT_MB = Math.max(10, Math.ceil(LIBRARY_MAX_FILE_MB * 1.5));
 export const LIBRARY_UPLOAD_BODY_LIMIT = `${LIBRARY_UPLOAD_BODY_LIMIT_MB}mb`;
 

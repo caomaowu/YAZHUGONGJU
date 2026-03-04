@@ -3,7 +3,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import mammoth from 'mammoth';
-import { LIBRARY_INDEX_DIR, LIBRARY_UPLOAD_DIR } from '../config/index.js';
+import { LIBRARY_INDEX_DIR, LIBRARY_INDEX_TIMEOUT_SEC, LIBRARY_UPLOAD_DIR } from '../config/index.js';
 import { nowIso } from '../utils/helpers.js';
 import { findLibraryItemById, readLibrary, updateLibraryItemById, writeLibrary } from './libraryStore.js';
 
@@ -16,7 +16,7 @@ const SEARCH_STATUS_SET = new Set(['pending', 'processing', 'ready', 'failed']);
 const MAX_HITS_LIMIT = 200;
 const DEFAULT_LIMIT = 50;
 const DOCX_CHUNK_CHARS = 1800;
-const PYTHON_TIMEOUT_MS = 5 * 60 * 1000;
+const PYTHON_TIMEOUT_MS = LIBRARY_INDEX_TIMEOUT_SEC * 1000;
 
 const queue = [];
 const queued = new Map();
