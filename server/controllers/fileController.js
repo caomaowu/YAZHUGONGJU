@@ -2,7 +2,13 @@ import fs from 'fs-extra';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import mammoth from 'mammoth';
-import { LIBRARY_UPLOAD_DIR, LIBRARY_MAX_FILE_BYTES, LIBRARY_MAX_FILE_MB } from '../config/index.js';
+import {
+  LIBRARY_UPLOAD_DIR,
+  LIBRARY_MAX_FILE_BYTES,
+  LIBRARY_MAX_FILE_MB,
+  LIBRARY_TOTAL_MAX_BYTES,
+  LIBRARY_TOTAL_MAX_MB,
+} from '../config/index.js';
 import {
   buildContentDisposition,
   inferLibraryType,
@@ -85,6 +91,12 @@ export const uploadLibraryFile = async (req, res) => {
       return res.status(413).json({ error: `File too large, max ${LIBRARY_MAX_FILE_MB}MB` });
     }
 
+    const items = await readLibrary();
+    const totalBytes = items.reduce((sum, it) => sum + (Number(it?.sizeBytes) || 0), 0);
+    if (totalBytes + buffer.length > LIBRARY_TOTAL_MAX_BYTES) {
+      return res.status(413).json({ error: `Library capacity exceeded, max ${LIBRARY_TOTAL_MAX_MB}MB` });
+    }
+
     const id = randomUUID();
     const ext = safeFileExt(originalName);
     const storedName = `${id}${ext}`;
@@ -111,7 +123,6 @@ export const uploadLibraryFile = async (req, res) => {
       searchUpdatedAt: nowIso(),
     });
 
-    const items = await readLibrary();
     items.unshift(item);
     await writeLibrary(items);
 

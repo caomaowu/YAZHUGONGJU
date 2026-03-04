@@ -77,7 +77,7 @@ type SearchResult = {
   truncated?: boolean
 }
 
-const UPLOAD_MAX_MB = 50
+const UPLOAD_MAX_MB = 150
 const UPLOAD_MAX_BYTES = UPLOAD_MAX_MB * 1024 * 1024
 
 function normalizeDisplayName(name: string) {
@@ -718,6 +718,30 @@ export function KnowledgeBasePage() {
         >
           {previewItem ? (
             <div style={{ display: 'flex', height: '100%', position: 'relative', overflow: 'hidden' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 20,
+                  left: 20,
+                  zIndex: 110,
+                  padding: 4,
+                  borderRadius: 14,
+                  background: 'rgba(255, 255, 255, 0.86)',
+                  border: `1px solid ${token.colorBorderSecondary}`,
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.12)',
+                }}
+              >
+                <Button
+                  type="text"
+                  icon={<LeftOutlined />}
+                  onClick={closePreview}
+                  style={{ borderRadius: 10, fontWeight: 600 }}
+                >
+                  退出预览
+                </Button>
+              </div>
+
               {/* 底部悬浮 Dock 工具栏 */}
               <div
                 style={{

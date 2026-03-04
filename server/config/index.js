@@ -16,8 +16,10 @@ function toPositiveInt(value, fallback) {
   return parsed;
 }
 
-export const LIBRARY_MAX_FILE_MB = toPositiveInt(process.env.LIBRARY_MAX_FILE_MB, 50);
+export const LIBRARY_MAX_FILE_MB = toPositiveInt(process.env.LIBRARY_MAX_FILE_MB, 150);
 export const LIBRARY_MAX_FILE_BYTES = LIBRARY_MAX_FILE_MB * 1024 * 1024;
+export const LIBRARY_TOTAL_MAX_MB = toPositiveInt(process.env.LIBRARY_TOTAL_MAX_MB, 2048);
+export const LIBRARY_TOTAL_MAX_BYTES = LIBRARY_TOTAL_MAX_MB * 1024 * 1024;
 export const LIBRARY_UPLOAD_BODY_LIMIT_MB = Math.max(10, Math.ceil(LIBRARY_MAX_FILE_MB * 1.5));
 export const LIBRARY_UPLOAD_BODY_LIMIT = `${LIBRARY_UPLOAD_BODY_LIMIT_MB}mb`;
 

@@ -21,7 +21,8 @@ NODE_ENV=production
 PORT=3001
 JWT_SECRET=replace-with-strong-secret
 CORS_ORIGIN=https://your-domain.com
-LIBRARY_MAX_FILE_MB=50
+LIBRARY_MAX_FILE_MB=150
+LIBRARY_TOTAL_MAX_MB=2048
 VITE_API_BASE_URL=/api
 APP_DOMAIN=your-domain.com
 APP_DIR=/opt/diecasting-app
@@ -31,6 +32,7 @@ APP_DIR=/opt/diecasting-app
 - `JWT_SECRET` 必须替换为强随机密钥。
 - `CORS_ORIGIN` 必须为你的正式域名（可逗号分隔多个域名）。
 - `LIBRARY_MAX_FILE_MB` 为知识库单文件上传上限（MB），需与 Nginx `client_max_body_size` 对齐。
+- `LIBRARY_TOTAL_MAX_MB` 为知识库总容量上限（MB），超过后新上传会被拒绝。
 
 ## 3. Nginx 反向代理
 
