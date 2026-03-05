@@ -97,7 +97,7 @@ const SEARCH_STATUS_LABEL: Record<SearchStatus, string> = {
 export function KnowledgeBasePage() {
   const { token } = theme.useToken()
   const screens = Grid.useBreakpoint()
-  const { user, token: authToken } = useAuth()
+  const { user, token: authToken, roles } = useAuth()
 
   const [q, setQ] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('')
@@ -131,7 +131,9 @@ export function KnowledgeBasePage() {
 
   const immersiveLeftOffset = screens.md ? 92 : 0
   const immersiveWidth = screens.md ? `calc(100vw - ${immersiveLeftOffset}px)` : '100vw'
-  const canManage = user?.role === 'admin'
+
+  const userRole = useMemo(() => roles.find((r) => r.id === user?.role), [roles, user?.role])
+  const canManage = userRole?.canEdit || false
 
   const clearPollTimer = () => {
     if (pollTimerRef.current) {

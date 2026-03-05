@@ -4,8 +4,9 @@ import jwt from 'jsonwebtoken';
 import { USERS_FILE, SECRET_KEY } from '../config/index.js';
 
 export const login = async (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
   try {
+    username = String(username || '').trim();
     const users = await fs.readJson(USERS_FILE);
     const user = users.find(u => u.username === username);
 

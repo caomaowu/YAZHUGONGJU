@@ -16,5 +16,11 @@
     "password": "$2b$10$NhlG3s.OXBypeh.yZGxajOmg2bVXyvKNZ2UaG0wOOJxZxsx7Rn9Lm",
     "role": "12",
     "name": "123"
+  },
+  {
+    "username": "mytest",
+    "password": "$2b$10$bKtcod.IVb/HuhfE/uZD8.ji8nhbyh6TbvxJSh5lSKxVBIFWbLVxi",
+    "role": "test123",
+    "name": "mytest"
   }
 ]

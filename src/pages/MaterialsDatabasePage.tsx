@@ -704,6 +704,31 @@ export const MaterialsDatabasePage: React.FC = () => {
                     <Typography.Text type="secondary">最多选择 3 个材料</Typography.Text>
                   </Space>
                 </Col>
+                <Col style={{ flex: 1, padding: '0 24px', display: 'flex', justifyContent: 'center' }}>
+                  {compareKeys.length > 0 ? (
+                    <Space size={6} wrap>
+                      {comparedMaterials.map((item) => (
+                        <Tag
+                          key={`${item.category}-${item.name}`}
+                          closable
+                          onClose={() => toggleCompareMaterial(item)}
+                          color="purple"
+                          style={{ fontSize: 13, padding: '4px 10px' }}
+                        >
+                          {item.name}
+                        </Tag>
+                      ))}
+                      <Button type="link" size="small" danger onClick={() => setCompareKeys([])}>
+                        清空
+                      </Button>
+                    </Space>
+                  ) : (
+                    <Typography.Text type="secondary" style={{ fontSize: 13, color: token.colorTextQuaternary }}>
+                      请在下方列表中选择要对比的材料
+                    </Typography.Text>
+                  )}
+                </Col>
+
                 <Col>
                   <Space>
                     <Tag color={compareKeys.length > 0 ? 'purple' : 'default'}>{compareKeys.length}/3</Tag>

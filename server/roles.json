@@ -61,5 +61,20 @@
     ],
     "canEdit": false,
     "canDelete": false
+  },
+  {
+    "id": "test123",
+    "name": "test123",
+    "permissions": [
+      "dashboard",
+      "machines",
+      "materials",
+      "knowledge-base",
+      "pq2",
+      "filling-simulation",
+      "ai-knowledge"
+    ],
+    "canEdit": true,
+    "canDelete": true
   }
 ]

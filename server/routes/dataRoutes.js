@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCapability } from '../middleware/auth.js';
 import {
   getRoles,
   createRole,
@@ -44,11 +44,11 @@ router.delete('/ai/chats', clearChats);
 
 // Machines
 router.get('/machines', getMachines);
-router.post('/machines', saveMachines);
+router.post('/machines', authenticateToken, requireCapability('edit'), saveMachines);
 
 // Locations
 router.get('/locations', getLocations);
-router.post('/locations', saveLocations);
+router.post('/locations', authenticateToken, requireCapability('edit'), saveLocations);
 
 // Machine Models
 router.get('/machine-models', getMachineModels);

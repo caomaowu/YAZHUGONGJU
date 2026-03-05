@@ -46,10 +46,13 @@ export const getRoles = async (req, res) => {
 
 export const createRole = async (req, res) => {
   try {
-    const { id, name, description, permissions, canEdit, canDelete } = req.body;
+    let { id, name, description, permissions, canEdit, canDelete } = req.body;
     if (!id || !name) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    id = String(id).trim();
+    name = String(name).trim();
 
     const roles = await fs.readJson(ROLES_FILE);
     if (roles.find(r => r.id === id)) {
@@ -69,7 +72,7 @@ export const createRole = async (req, res) => {
 export const updateRole = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, permissions, canEdit, canDelete } = req.body;
+    let { name, description, permissions, canEdit, canDelete } = req.body;
     
     if (id === 'admin') {
       if (permissions && !permissions.includes('*')) {
@@ -85,7 +88,7 @@ export const updateRole = async (req, res) => {
     }
 
     const role = roles[roleIndex];
-    if (name) role.name = name;
+    if (name) role.name = String(name).trim();
     if (description !== undefined) role.description = description;
     if (permissions) role.permissions = permissions;
     if (canEdit !== undefined) role.canEdit = canEdit;
@@ -140,10 +143,13 @@ export const getUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { username, password, role, name } = req.body;
+    let { username, password, role, name } = req.body;
     if (!username || !password || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    username = String(username).trim();
+    name = name ? String(name).trim() : username;
 
     const users = await fs.readJson(USERS_FILE);
     if (users.find(u => u.username === username)) {
@@ -151,7 +157,7 @@ export const createUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = { username, password: hashedPassword, role, name: name || username };
+    const newUser = { username, password: hashedPassword, role, name };
     
     users.push(newUser);
     await fs.writeJson(USERS_FILE, users, { spaces: 2 });
@@ -166,7 +172,7 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { username } = req.params;
-    const { password, role, name } = req.body;
+    let { password, role, name } = req.body;
     
     const users = await fs.readJson(USERS_FILE);
     const userIndex = users.findIndex(u => u.username === username);
@@ -180,7 +186,7 @@ export const updateUser = async (req, res) => {
       user.password = await bcrypt.hash(password, 10);
     }
     if (role) user.role = role;
-    if (name) user.name = name;
+    if (name) user.name = String(name).trim();
 
     users[userIndex] = user;
     await fs.writeJson(USERS_FILE, users, { spaces: 2 });

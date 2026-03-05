@@ -13,8 +13,10 @@ const { Content } = Layout;
 const { Title, Text } = Typography;
 
 export const MachineDatabasePage: React.FC = () => {
-  const { token } = antTheme.useToken();
-  const { user } = useAuth();
+  const { token: themeToken } = antTheme.useToken();
+  // Rename token from useAuth to authToken to avoid conflict with theme token if any
+  const { user, token: authToken, roles } = useAuth();
+  const token = themeToken; // Alias back for existing code using 'token' for theme
   const [query, setQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState<string>('全部');
   const [selectedMachine, setSelectedMachine] = useState<DieCastingMachine | null>(null);
@@ -28,9 +30,10 @@ export const MachineDatabasePage: React.FC = () => {
   const [targetLocation, setTargetLocation] = useState<string | null>(null);
 
   // Permissions
-  const canEdit = user?.role === 'admin' || user?.role === 'engineer';
-  const canDelete = user?.role === 'admin';
-  const canAdd = user?.role === 'admin' || user?.role === 'engineer';
+  const userRole = useMemo(() => roles.find(r => r.id === user?.role), [roles, user?.role]);
+  const canEdit = userRole?.canEdit || false;
+  const canDelete = userRole?.canDelete || false;
+  const canAdd = canEdit;
   
   // State to hold machines
   const [machines, setMachines] = useState<DieCastingMachine[]>([]);
@@ -64,10 +67,14 @@ export const MachineDatabasePage: React.FC = () => {
 
   // Save locations
   const handleUpdateLocations = (newLocations: string[]) => {
+    if (!authToken) return;
     setAvailableLocations(newLocations);
     fetch('/api/locations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
       body: JSON.stringify(newLocations),
     }).catch(err => {
       console.error('Failed to save locations', err);
@@ -130,10 +137,14 @@ export const MachineDatabasePage: React.FC = () => {
 
   // Helper to persist machines
   const persistMachines = async (newMachines: DieCastingMachine[]) => {
+    if (!authToken) return false;
     try {
       const response = await fetch('/api/machines', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
         body: JSON.stringify(newMachines),
       });
       if (!response.ok) throw new Error('Failed to save');

@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateToken, requireRole, requireCapability } from '../middleware/auth.js';
 import {
   getLibraryFiles,
   uploadLibraryFile,
@@ -16,15 +16,15 @@ const router = express.Router();
 
 // Library
 router.get('/library/files', authenticateToken, getLibraryFiles);
-router.post('/library/files', authenticateToken, requireRole(['admin']), uploadLibraryFile);
+router.post('/library/files', authenticateToken, requireRole(['admin', 'engineer']), uploadLibraryFile);
 
 router.get('/library/files/:id/preview', authenticateToken, previewLibraryFile);
 router.get('/library/files/:id/download', authenticateToken, downloadLibraryFile);
 router.get('/library/files/:id/search-status', authenticateToken, getLibraryFileSearchStatus);
 router.get('/library/files/:id/search', authenticateToken, searchLibraryFileContent);
-router.post('/library/files/:id/reindex', authenticateToken, requireRole(['admin']), reindexLibraryFile);
+router.post('/library/files/:id/reindex', authenticateToken, requireCapability('edit'), reindexLibraryFile);
 
-router.patch('/library/files/:id', authenticateToken, requireRole(['admin']), updateLibraryFile);
-router.delete('/library/files/:id', authenticateToken, requireRole(['admin']), deleteLibraryFile);
+router.patch('/library/files/:id', authenticateToken, requireCapability('edit'), updateLibraryFile);
+router.delete('/library/files/:id', authenticateToken, requireCapability('delete'), deleteLibraryFile);
 
 export default router;
