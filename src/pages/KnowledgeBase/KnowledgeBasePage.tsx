@@ -118,6 +118,7 @@ export function KnowledgeBasePage() {
   const [searchStatus, setSearchStatus] = useState<SearchStatus>('pending')
   const [searchError, setSearchError] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [searching, setSearching] = useState(false)
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
   const [activeHitIndex, setActiveHitIndex] = useState(0)
@@ -287,23 +288,28 @@ export function KnowledgeBasePage() {
     }
   }, [authToken, previewItem, searchKeyword])
   const downloadItem = async (it: LibraryItem) => {
-    if (!authToken) return
+    if (!authToken || downloadingId) return
     try {
-      const res = await fetch(`/api/library/files/${encodeURIComponent(it.id)}/download`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
-      if (!res.ok) throw new Error('下载失败')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
+      setDownloadingId(it.id)
+      message.loading({ content: '正在启动下载...', key: 'download', duration: 0 })
+      
+      // 使用 URL 直接下载，避免 fetch 阻塞页面和占用内存
+      const url = `/api/library/files/${encodeURIComponent(it.id)}/download?token=${encodeURIComponent(authToken)}`
       const a = document.createElement('a')
       a.href = url
       a.download = it.originalName || 'file'
       document.body.appendChild(a)
       a.click()
       a.remove()
-      URL.revokeObjectURL(url)
+      
+      // 延迟关闭 Loading，因为无法确切知道下载何时开始传输
+      setTimeout(() => {
+        message.success({ content: '已添加到下载任务', key: 'download', duration: 2 })
+        setDownloadingId(null)
+      }, 1500)
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '下载失败')
+      message.error({ content: '启动下载失败', key: 'download' })
+      setDownloadingId(null)
     }
   }
 
@@ -656,8 +662,13 @@ export function KnowledgeBasePage() {
                       <Button size="small" type="primary" ghost onClick={() => void openPreview(it)}>
                         预览
                       </Button>
-                      <Button size="small" icon={<DownloadOutlined />} onClick={() => void downloadItem(it)}>
-                        下载
+                      <Button 
+                        size="small" 
+                        icon={downloadingId === it.id ? <Spin size="small" /> : <DownloadOutlined />} 
+                        onClick={() => void downloadItem(it)}
+                        disabled={!!downloadingId}
+                      >
+                        {downloadingId === it.id ? '下载中' : '下载'}
                       </Button>
                     </Space>
                     {canManage ? (
@@ -833,8 +844,10 @@ export function KnowledgeBasePage() {
                     <Button
                       size="small"
                       type="text"
-                      icon={<DownloadOutlined style={{ color: '#fff' }} />}
+                      icon={downloadingId === previewItem.id ? <Spin size="small" /> : <DownloadOutlined style={{ color: '#fff' }} />}
                       onClick={() => void downloadItem(previewItem)}
+                      disabled={!!downloadingId}
+                      title="下载文件"
                     />
                     
                     <Button

@@ -1,29 +1,12 @@
 [
   {
-    "id": "d7f803cc-ec07-435e-9651-3609215fab67",
-    "originalName": "压铸成形工艺与模具设计   第2版 -- 江昌勇主编 -- 2018, 2018 -- 14393276 -- b8848e7e95befe4e3ea1bdf5e5a15443 -- Anna’s Archive.pdf",
-    "storedName": "d7f803cc-ec07-435e-9651-3609215fab67.pdf",
-    "mimeType": "application/pdf",
-    "type": "pdf",
-    "sizeBytes": 67630086,
-    "uploadedAt": "2026-03-04T02:09:21.884Z",
-    "uploadedBy": "admin",
-    "description": "",
-    "category": "",
-    "tags": [],
-    "searchStatus": "processing",
-    "searchError": "",
-    "searchVersion": 1,
-    "searchUpdatedAt": "2026-03-04T02:09:25.830Z"
-  },
-  {
-    "id": "23daf491-1027-46fe-9935-b9007e61dbc0",
-    "originalName": "海天金属HDC-2021-0723.pdf",
-    "storedName": "23daf491-1027-46fe-9935-b9007e61dbc0.pdf",
+    "id": "c5ea112d-968b-4e81-b4f2-5eb03c4c04ba",
+    "originalName": "金属HDC-2021-0723.pdf",
+    "storedName": "c5ea112d-968b-4e81-b4f2-5eb03c4c04ba.pdf",
     "mimeType": "application/pdf",
     "type": "pdf",
     "sizeBytes": 2796164,
-    "uploadedAt": "2026-03-03T08:57:34.656Z",
+    "uploadedAt": "2026-03-05T12:51:03.256Z",
     "uploadedBy": "admin",
     "description": "",
     "category": "",
@@ -31,16 +14,16 @@
     "searchStatus": "ready",
     "searchError": "",
     "searchVersion": 1,
-    "searchUpdatedAt": "2026-03-03T08:57:36.003Z"
+    "searchUpdatedAt": "2026-03-05T12:51:04.411Z"
   },
   {
-    "id": "cc14432b-3876-4b16-8a85-76fd1eaddfc1",
+    "id": "41003b67-5059-4710-898a-513d1cd7a3c7",
     "originalName": "压铸模具设计手册（正衍）简体(1).pdf",
-    "storedName": "cc14432b-3876-4b16-8a85-76fd1eaddfc1.pdf",
+    "storedName": "41003b67-5059-4710-898a-513d1cd7a3c7.pdf",
     "mimeType": "application/pdf",
     "type": "pdf",
     "sizeBytes": 5075536,
-    "uploadedAt": "2026-03-03T07:53:40.148Z",
+    "uploadedAt": "2026-03-05T12:50:31.209Z",
     "uploadedBy": "admin",
     "description": "",
     "category": "",
@@ -48,6 +31,6 @@
     "searchStatus": "ready",
     "searchError": "",
     "searchVersion": 1,
-    "searchUpdatedAt": "2026-03-03T07:58:27.467Z"
+    "searchUpdatedAt": "2026-03-05T12:50:34.508Z"
   }
 ]

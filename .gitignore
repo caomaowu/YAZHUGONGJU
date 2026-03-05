@@ -27,3 +27,5 @@ dist-ssr
 server/chats.json
 server/uploads
 server/analytics_events.json
+server/indexes/library/c5ea112d-968b-4e81-b4f2-5eb03c4c04ba.index.json
+server/library.json

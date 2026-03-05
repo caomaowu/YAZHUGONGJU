@@ -23,11 +23,26 @@ done
 
 mkdir -p logs
 
+wait_for_url() {
+  local url="$1"
+  local retries="${2:-20}"
+  local delay="${3:-1}"
+
+  for ((i=1; i<=retries; i++)); do
+    if curl --fail --silent "$url" > /dev/null; then
+      return 0
+    fi
+    sleep "$delay"
+  done
+
+  return 1
+}
+
 echo "[1/6] Updating source..."
 git pull --ff-only
 
 echo "[2/6] Installing dependencies..."
-npm ci
+npm ci --include=dev
 
 echo "[3/6] Building app..."
 npm run build
@@ -37,9 +52,9 @@ pm2 startOrRestart ecosystem.config.cjs --env production --update-env
 pm2 save
 
 echo "[5/6] Health check: /api/health"
-curl --fail --silent "http://127.0.0.1:${PORT:-3001}/api/health" > /dev/null
+wait_for_url "http://127.0.0.1:${PORT:-3001}/api/health"
 
 echo "[6/6] Health check: /"
-curl --fail --silent "http://127.0.0.1:${PORT:-3001}/" > /dev/null
+wait_for_url "http://127.0.0.1:${PORT:-3001}/"
 
 echo "Deploy completed successfully."
