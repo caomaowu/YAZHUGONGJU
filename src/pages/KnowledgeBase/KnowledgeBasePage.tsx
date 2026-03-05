@@ -309,7 +309,7 @@ export function KnowledgeBasePage() {
         message.success({ content: '已添加到下载任务', key: 'download', duration: 2 })
         setDownloadingId(null)
       }, 1500)
-    } catch (e) {
+    } catch {
       message.error({ content: '启动下载失败', key: 'download' })
       setDownloadingId(null)
     }
@@ -1115,7 +1115,7 @@ function UploadContent(props: {
           拖拽文件到此处上传
         </Typography.Title>
         <Typography.Text type="secondary">
-          支持 PDF / Word(.docx) / 图片 / Markdown / 文本，单文件最大 {UPLOAD_MAX_MB}MB。上传与删除需要管理员权限。
+          支持 PDF / Word(.docx) / 图片 / Markdown / 文本，单文件最大 {UPLOAD_MAX_MB}MB。上传需要编辑权限，删除需要删除权限。
         </Typography.Text>
       </div>
     </Upload.Dragger>

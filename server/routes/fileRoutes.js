@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, requireRole, requireCapability } from '../middleware/auth.js';
+import { authenticateToken, requireCapability } from '../middleware/auth.js';
 import {
   getLibraryFiles,
   uploadLibraryFile,
@@ -16,7 +16,7 @@ const router = express.Router();
 
 // Library
 router.get('/library/files', authenticateToken, getLibraryFiles);
-router.post('/library/files', authenticateToken, requireRole(['admin', 'engineer']), uploadLibraryFile);
+router.post('/library/files', authenticateToken, requireCapability('edit'), uploadLibraryFile);
 
 router.get('/library/files/:id/preview', authenticateToken, previewLibraryFile);
 router.get('/library/files/:id/download', authenticateToken, downloadLibraryFile);
