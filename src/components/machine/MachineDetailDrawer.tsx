@@ -194,6 +194,26 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
             </div>
           )}
         </div>
+
+        {!isEditing && (
+          <div style={{ 
+            flex: 1,
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            marginLeft: 32,
+            marginRight: 32,
+            padding: '8px 16px',
+            background: '#fff7e6',
+            borderRadius: 6,
+            border: '1px solid #ffd591'
+          }}>
+            <Text style={{ fontSize: 13, color: '#d46b08', fontWeight: 500 }}>射料行程 - 冲头行程 = 料管内部长度</Text>
+            <Text style={{ fontSize: 13, color: '#d46b08', fontWeight: 500 }}>料管内部长度 + 模具顶面到分流锥顶部距离 = 总空压射行程</Text>
+          </div>
+        )}
+
         <Button 
            type="text" 
            icon={<CloseOutlined />} 
