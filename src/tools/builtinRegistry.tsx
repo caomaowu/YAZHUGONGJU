@@ -9,6 +9,7 @@ import { MaterialsDatabasePage } from '../pages/MaterialsDatabasePage'
 import { UserManagementPage } from '../pages/UserManagementPage'
 import { AIKnowledgeBasePage } from '../pages/AIKnowledgeBase/AIKnowledgeBasePage'
 import { KnowledgeBasePage } from '../pages/KnowledgeBase/KnowledgeBasePage'
+import { ToolboxPage } from '../pages/ToolboxPage'
 
 function createBuiltinTools(): ToolDefinition[] {
   return [
@@ -64,14 +65,27 @@ function createBuiltinTools(): ToolDefinition[] {
       disabled: true,
     },
     {
+      id: 'toolbox',
+      title: '工具箱',
+      navLabel: '工具箱',
+      route: '/toolbox',
+      icon: <AppstoreOutlined />,
+      description: '收纳工艺计算与模拟工具的统一入口',
+      order: 19,
+      element: <ToolboxPage />,
+      allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
+    },
+    {
       id: 'pq2',
       title: 'PQ² 图',
       navLabel: 'PQ² 图',
       route: '/pq2',
       icon: <LineChartOutlined />,
+      description: '浇口速度、充填时间与设备能力分析',
       order: 20,
       element: <PQ2Page />,
       allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
+      hiddenInNav: true,
     },
     {
       id: 'filling-simulation',
@@ -79,9 +93,11 @@ function createBuiltinTools(): ToolDefinition[] {
       navLabel: '压射模拟',
       route: '/filling-simulation',
       icon: <ThunderboltOutlined />,
+      description: '压室与压射阶段参数模拟推演',
       order: 25,
       element: <FillingSimulationPage />,
       allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
+      hiddenInNav: true,
     },
     {
       id: 'ai-knowledge',

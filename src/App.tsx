@@ -9,6 +9,7 @@ import {
 import { useHashPath } from './core/router/hash'
 import { SharedStateProvider } from './core/state/SharedStateProvider'
 import { builtinToolRegistry } from './tools/builtinRegistry'
+import { isToolVisibleInNav } from './tools/navigation'
 import { ThemeProvider } from './core/state/ThemeContext'
 import { useTheme } from './core/state/themeState'
 import { lavenderTheme } from './theme/lavenderTheme'
@@ -111,7 +112,7 @@ function MainLayout() {
           const candidates = [t.title, t.navLabel, t.description ?? '']
           return candidates.some((text) => normalizeSearchText(text).includes(q))
         })
-      : tools).filter((t) => t.id !== 'ai')
+      : tools).filter((t) => t.id !== 'ai' && isToolVisibleInNav(t))
       
     return list.map((t) => {
       const isAllowed = (!t.allowedRoles || hasPermission(t.id)) && !t.disabled

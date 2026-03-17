@@ -14,5 +14,5 @@ export type ToolDefinition = {
   element: ReactNode
   allowedRoles?: Role[]
   disabled?: boolean
+  hiddenInNav?: boolean
 }
-

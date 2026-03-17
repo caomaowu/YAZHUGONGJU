@@ -20,6 +20,7 @@ const TOOL_LABEL_MAP: Record<string, string> = {
   dashboard: '工作台',
   machines: '设备数据库',
   'knowledge-base': '知识库',
+  toolbox: '工具箱',
   pq2: 'PQ² 图',
   'filling-simulation': '压射模拟',
   'ai-knowledge': 'AI助手',
@@ -124,7 +125,7 @@ export function DashboardPage() {
         <div className="centerTitle">
           <Typography.Text type="secondary">工作台</Typography.Text>
           <h1>压铸工具箱 · Lavender Workbench</h1>
-          <p>路由与工具注册中心已接入：点击左侧导航即可切换工具。</p>
+          <p>工具已按业务入口整理，常用工艺分析与模拟能力可从左侧“工具箱”统一进入。</p>
         </div>
 
         <Space wrap size={10}>
@@ -137,8 +138,8 @@ export function DashboardPage() {
             onChange={(v) => setDays(v as 7 | 30)}
             size="small"
           />
-          <Button type="primary" icon={<ThunderboltOutlined />} onClick={() => navigate('/pq2')}>
-            快速开始
+          <Button type="primary" icon={<ThunderboltOutlined />} onClick={() => navigate('/toolbox')}>
+            打开工具箱
           </Button>
         </Space>
       </div>
@@ -212,7 +213,10 @@ export function DashboardPage() {
 
           <Card className="softCard span4" title="快捷入口">
             <Space direction="vertical" size={10} style={{ width: '100%' }}>
-              <Button block type="primary" icon={<LineChartOutlined />} onClick={() => navigate('/pq2')}>
+              <Button block type="primary" icon={<LineChartOutlined />} onClick={() => navigate('/toolbox')}>
+                进入工具箱
+              </Button>
+              <Button block icon={<ThunderboltOutlined />} onClick={() => navigate('/pq2')}>
                 新建 PQ² 计算
               </Button>
               <Button block icon={<ThunderboltOutlined />} onClick={() => navigate('/ai-knowledge')}>
