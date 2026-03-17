@@ -19,7 +19,8 @@
       "materials",
       "templates",
       "settings",
-      "knowledge-base"
+      "knowledge-base",
+      "moldflow-knowledge"
     ],
     "canEdit": true,
     "canDelete": false
@@ -45,7 +46,8 @@
       "pq2",
       "templates",
       "settings",
-      "knowledge-base"
+      "knowledge-base",
+      "moldflow-knowledge"
     ],
     "canEdit": false,
     "canDelete": false

@@ -117,6 +117,7 @@ function MainLayout() {
     return list.map((t) => {
       const isAllowed = (!t.allowedRoles || hasPermission(t.id)) && !t.disabled
       const isAI = t.id === 'ai-knowledge'
+      const isMoldflow = t.id === 'moldflow-knowledge'
       
       return { 
         key: t.id, 
@@ -131,13 +132,17 @@ function MainLayout() {
             }}>
               AI助手
             </span>
+        ) : isMoldflow ? (
+          <span>
+            模流知识库
+          </span>
         ) : (
           <span style={{ color: isAllowed ? 'inherit' : '#999' }}>
             {t.navLabel} {isAllowed ? '' : '(暂未开放)'}
           </span>
         ),
         disabled: false, // We handle click manually
-        className: isAI ? 'ai-menu-item' : ''
+        className: isAI ? 'ai-menu-item' : isMoldflow ? 'moldflow-menu-item' : ''
       };
     })
   }, [query, tools, hasPermission])

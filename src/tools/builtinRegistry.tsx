@@ -1,4 +1,4 @@
-import { AppstoreOutlined, LineChartOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined, ThunderboltOutlined, BookOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, LineChartOutlined, DatabaseOutlined, TeamOutlined, RobotOutlined, FundOutlined, ThunderboltOutlined, BookOutlined, GatewayOutlined } from '@ant-design/icons'
 import { ToolRegistry } from '../core/tools/ToolRegistry'
 import type { ToolDefinition } from '../core/tools/types'
 import { DashboardPage } from '../pages/DashboardPage'
@@ -10,6 +10,7 @@ import { UserManagementPage } from '../pages/UserManagementPage'
 import { AIKnowledgeBasePage } from '../pages/AIKnowledgeBase/AIKnowledgeBasePage'
 import { KnowledgeBasePage } from '../pages/KnowledgeBase/KnowledgeBasePage'
 import { ToolboxPage } from '../pages/ToolboxPage'
+import { MoldflowKnowledgePage } from '../pages/MoldflowKnowledgePage'
 
 function createBuiltinTools(): ToolDefinition[] {
   return [
@@ -51,6 +52,16 @@ function createBuiltinTools(): ToolDefinition[] {
       icon: <BookOutlined />,
       order: 17,
       element: <KnowledgeBasePage />,
+      allowedRoles: ['admin', 'engineer', 'viewer'],
+    },
+    {
+      id: 'moldflow-knowledge',
+      title: '模流知识库',
+      navLabel: '模流知识库',
+      route: '/moldflow-knowledge',
+      icon: <GatewayOutlined />,
+      order: 17.5,
+      element: <MoldflowKnowledgePage />,
       allowedRoles: ['admin', 'engineer', 'viewer'],
     },
     {

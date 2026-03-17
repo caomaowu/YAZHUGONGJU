@@ -20,6 +20,7 @@ const TOOL_LABEL_MAP: Record<string, string> = {
   dashboard: '工作台',
   machines: '设备数据库',
   'knowledge-base': '知识库',
+  'moldflow-knowledge': '模流知识库',
   toolbox: '工具箱',
   pq2: 'PQ² 图',
   'filling-simulation': '压射模拟',

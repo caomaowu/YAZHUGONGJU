@@ -14,6 +14,7 @@ import authRoutes from './routes/authRoutes.js';
 import dataRoutes from './routes/dataRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
+import moldflowKnowledgeRoutes from './routes/moldflowKnowledgeRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,6 +55,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', dataRoutes); // /api/roles, /api/users, /api/machines, etc.
 app.use('/api', aiRoutes);   // /api/bailian/..., /api/ai/...
 app.use('/api', fileRoutes); // /api/library/...
+app.use('/api/moldflow-knowledge', moldflowKnowledgeRoutes);
 
 // Serve static files from the React app
 const distPath = path.join(__dirname, '../dist');

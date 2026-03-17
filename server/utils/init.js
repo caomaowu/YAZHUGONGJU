@@ -6,6 +6,7 @@ import {
   ROLES_FILE, 
   CHATS_FILE, 
   ANALYTICS_EVENTS_FILE,
+  MOLDFLOW_KNOWLEDGE_CONFIG_FILE,
   LIBRARY_FILE, 
   LIBRARY_UPLOAD_DIR,
   LIBRARY_INDEX_DIR
@@ -80,6 +81,18 @@ export const initializeData = async () => {
   if (!fs.existsSync(ANALYTICS_EVENTS_FILE)) {
     fs.writeJsonSync(ANALYTICS_EVENTS_FILE, [], { spaces: 2 });
   }
+
+  if (!fs.existsSync(MOLDFLOW_KNOWLEDGE_CONFIG_FILE)) {
+    fs.writeJsonSync(
+      MOLDFLOW_KNOWLEDGE_CONFIG_FILE,
+      {
+        title: '模流知识库',
+        url: '',
+        description: '在这里集中进入外部模流分析知识站点。',
+      },
+      { spaces: 2 },
+    );
+  }
   
   // Ensure library file exists
   if (!fs.existsSync(LIBRARY_FILE)) {
@@ -134,7 +147,9 @@ export const initializeData = async () => {
         if (!role.permissions.includes(perm)) role.permissions.push(perm);
       };
       ensurePerm('engineer', 'knowledge-base');
+      ensurePerm('engineer', 'moldflow-knowledge');
       ensurePerm('viewer', 'knowledge-base');
+      ensurePerm('viewer', 'moldflow-knowledge');
       fs.writeJsonSync(ROLES_FILE, roles, { spaces: 2 });
     }
   } catch {}
