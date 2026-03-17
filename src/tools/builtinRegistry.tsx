@@ -65,17 +65,6 @@ function createBuiltinTools(): ToolDefinition[] {
       disabled: true,
     },
     {
-      id: 'toolbox',
-      title: '工具箱',
-      navLabel: '工具箱',
-      route: '/toolbox',
-      icon: <AppstoreOutlined />,
-      description: '收纳工艺计算与模拟工具的统一入口',
-      order: 19,
-      element: <ToolboxPage />,
-      allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
-    },
-    {
       id: 'pq2',
       title: 'PQ² 图',
       navLabel: 'PQ² 图',
@@ -86,6 +75,7 @@ function createBuiltinTools(): ToolDefinition[] {
       element: <PQ2Page />,
       allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
       hiddenInNav: true,
+      toolCategory: 'toolbox',
     },
     {
       id: 'filling-simulation',
@@ -98,26 +88,7 @@ function createBuiltinTools(): ToolDefinition[] {
       element: <FillingSimulationPage />,
       allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
       hiddenInNav: true,
-    },
-    {
-      id: 'ai-knowledge',
-      title: 'AI助手',
-      navLabel: 'AI助手',
-      route: '/ai-knowledge',
-      icon: <RobotOutlined />,
-      order: 200,
-      element: <AIKnowledgeBasePage />,
-      allowedRoles: ['admin', 'engineer', 'viewer'],
-    },
-    {
-      id: 'users',
-      title: '用户管理',
-      navLabel: '用户管理',
-      route: '/users',
-      icon: <TeamOutlined />,
-      order: 100,
-      element: <UserManagementPage />,
-      allowedRoles: ['admin'],
+      toolCategory: 'toolbox',
     },
   ]
 }
@@ -125,6 +96,37 @@ function createBuiltinTools(): ToolDefinition[] {
 export const builtinToolRegistry = (() => {
   const registry = new ToolRegistry()
   for (const tool of createBuiltinTools()) registry.register(tool)
+  registry.register({
+    id: 'toolbox',
+    title: '工具箱',
+    navLabel: '工具箱',
+    route: '/toolbox',
+    icon: <AppstoreOutlined />,
+    description: '收纳工艺计算与模拟工具的统一入口',
+    order: 19,
+    element: <ToolboxPage getTools={() => registry.list().filter((tool) => tool.toolCategory === 'toolbox')} />,
+    allowedRoles: ['admin', 'engineer', 'operator', 'viewer'],
+  })
+  registry.register({
+    id: 'users',
+    title: '用户管理',
+    navLabel: '用户管理',
+    route: '/users',
+    icon: <TeamOutlined />,
+    order: 100,
+    element: <UserManagementPage />,
+    allowedRoles: ['admin'],
+  })
+  registry.register({
+    id: 'ai-knowledge',
+    title: 'AI助手',
+    navLabel: 'AI助手',
+    route: '/ai-knowledge',
+    icon: <RobotOutlined />,
+    order: 200,
+    element: <AIKnowledgeBasePage />,
+    allowedRoles: ['admin', 'engineer', 'viewer'],
+  })
   return registry
 })()
 

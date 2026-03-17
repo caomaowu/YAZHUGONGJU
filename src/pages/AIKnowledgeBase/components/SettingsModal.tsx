@@ -10,7 +10,7 @@ interface SettingsModalProps {
   visible: boolean
   settings: AISettings
   onClose: () => void
-  onSave: (settings: AISettings) => void
+  onSave: (settings: AISettings) => Promise<void> | void
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -160,11 +160,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
       }
       
-      onSave(finalSettings)
+      await onSave(finalSettings)
       message.success('设置已保存')
       onClose()
-    } catch {
-      message.error('保存失败')
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存失败')
     }
   }
 
@@ -278,7 +278,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               label="API Key"
               name="apiKey"
               rules={[{ required: true, message: '请输入 API Key' }]}
-              tooltip="您的 Key 仅存储在本地浏览器中，不会上传到服务器"
+              tooltip="您的 Key 会保存在当前系统服务器中，重启后仍会保留"
             >
               <Input.Password placeholder="sk-..." />
             </Form.Item>

@@ -33,6 +33,7 @@ export const ROLES_FILE = path.join(SERVER_ROOT, 'roles.json');
 export const CHATS_FILE = path.join(SERVER_ROOT, 'chats.json');
 export const ANALYTICS_EVENTS_FILE = path.join(SERVER_ROOT, 'analytics_events.json');
 export const BAILIAN_CONFIG_FILE = path.join(SERVER_ROOT, 'bailian_config.json');
+export const AI_SETTINGS_FILE = path.join(SERVER_ROOT, 'ai_settings.json');
 export const LIBRARY_FILE = path.join(SERVER_ROOT, 'library.json');
 export const LIBRARY_UPLOAD_DIR = path.join(SERVER_ROOT, 'uploads', 'library');
 export const LIBRARY_INDEX_DIR = path.join(SERVER_ROOT, 'indexes', 'library');

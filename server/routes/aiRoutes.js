@@ -1,6 +1,8 @@
 import express from 'express';
 import {
+  getAiSettings,
   getConfig,
+  updateAiSettings,
   updateConfig,
   listFiles,
   uploadDocument,
@@ -11,6 +13,8 @@ import {
 const router = express.Router();
 
 // Config
+router.get('/ai/settings', getAiSettings);
+router.post('/ai/settings', updateAiSettings);
 router.get('/bailian/config', getConfig);
 router.post('/bailian/config', updateConfig);
 

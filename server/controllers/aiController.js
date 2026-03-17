@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import OpenAI from 'openai';
 import fetch from 'node-fetch';
 import crypto from 'crypto';
-import { BAILIAN_CONFIG_FILE } from '../config/index.js';
+import { AI_SETTINGS_FILE, BAILIAN_CONFIG_FILE } from '../config/index.js';
 import { getBailianConfig } from '../config/bailian.js';
 import { 
   createBailianClient, 
@@ -11,7 +11,68 @@ import {
   ListFileRequest, 
   RetrieveRequest 
 } from '../utils/bailian.js';
-import { maskSensitive, isMasked } from '../utils/helpers.js';
+import { maskSensitive, isMasked, readJsonWithDefault } from '../utils/helpers.js';
+
+const DEFAULT_AI_SETTINGS = {
+  currentProviderId: 'deepseek',
+  providers: {
+    deepseek: {
+      id: 'deepseek',
+      name: 'DeepSeek',
+      apiKey: '',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-chat',
+      temperature: 0.7,
+    },
+    openai: {
+      id: 'openai',
+      name: 'OpenAI',
+      apiKey: '',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-4o',
+      temperature: 0.7,
+    },
+  },
+};
+
+function sanitizeAiSettings(input) {
+  const raw = input && typeof input === 'object' ? input : {};
+  const rawProviders = raw.providers && typeof raw.providers === 'object' ? raw.providers : {};
+  const providerEntries = Object.entries(rawProviders).map(([id, provider]) => {
+    const source = provider && typeof provider === 'object' ? provider : {};
+    return [
+      id,
+      {
+        id: String(source.id || id),
+        name: String(source.name || id),
+        apiKey: String(source.apiKey || ''),
+        baseUrl: String(source.baseUrl || 'https://api.openai.com/v1'),
+        model: String(source.model || 'gpt-4o'),
+        temperature: Number.isFinite(Number(source.temperature)) ? Number(source.temperature) : 0.7,
+        ...(source.isCustom ? { isCustom: true } : {}),
+        ...(source.useProxy !== undefined ? { useProxy: Boolean(source.useProxy) } : {}),
+      },
+    ];
+  });
+
+  const providers =
+    providerEntries.length > 0
+      ? Object.fromEntries(providerEntries)
+      : DEFAULT_AI_SETTINGS.providers;
+
+  const fallbackProviderId = providers.deepseek ? 'deepseek' : Object.keys(providers)[0];
+  const currentProviderId = providers[raw.currentProviderId] ? raw.currentProviderId : fallbackProviderId;
+
+  return {
+    currentProviderId,
+    providers,
+  };
+}
+
+async function getAiSettingsConfig() {
+  const settings = await readJsonWithDefault(AI_SETTINGS_FILE, DEFAULT_AI_SETTINGS);
+  return sanitizeAiSettings(settings);
+}
 
 // --- Config ---
 export const getConfig = async (req, res) => {
@@ -60,6 +121,25 @@ export const updateConfig = async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save config' });
+  }
+};
+
+export const getAiSettings = async (req, res) => {
+  try {
+    const settings = await getAiSettingsConfig();
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get AI settings' });
+  }
+};
+
+export const updateAiSettings = async (req, res) => {
+  try {
+    const settings = sanitizeAiSettings(req.body);
+    await fs.writeJson(AI_SETTINGS_FILE, settings, { spaces: 2 });
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save AI settings' });
   }
 };
 

@@ -15,4 +15,5 @@ export type ToolDefinition = {
   allowedRoles?: Role[]
   disabled?: boolean
   hiddenInNav?: boolean
+  toolCategory?: 'toolbox'
 }

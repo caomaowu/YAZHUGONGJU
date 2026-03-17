@@ -4,6 +4,28 @@ import { DEFAULT_SETTINGS } from '../types'
 import type { ChatSession, Message, AISettings } from '../types'
 import { API_BASE_URL } from '../../../config/api'
 
+function normalizeSettings(input: unknown): AISettings {
+  const raw = input && typeof input === 'object' ? (input as Partial<AISettings>) : {}
+  const incomingProviders =
+    raw.providers && typeof raw.providers === 'object' ? raw.providers : {}
+
+  const providers = Object.keys(incomingProviders).length > 0
+    ? { ...incomingProviders }
+    : DEFAULT_SETTINGS.providers
+
+  const currentProviderId =
+    raw.currentProviderId && providers[raw.currentProviderId]
+      ? raw.currentProviderId
+      : providers.deepseek
+        ? 'deepseek'
+        : Object.keys(providers)[0]
+
+  return {
+    currentProviderId,
+    providers,
+  }
+}
+
 export const useAIChat = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -11,13 +33,7 @@ export const useAIChat = () => {
     try {
       const saved = localStorage.getItem('ai_settings')
       if (saved) {
-        const parsed = JSON.parse(saved)
-        // Check if it's the new format
-        if (parsed.currentProviderId && parsed.providers) {
-          return parsed
-        }
-        // Migration from old format
-        return DEFAULT_SETTINGS
+        return normalizeSettings(JSON.parse(saved))
       }
       return DEFAULT_SETTINGS
     } catch {
@@ -28,6 +44,20 @@ export const useAIChat = () => {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   // Load sessions from server on mount
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/ai/settings`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Failed to load AI settings')
+        return res.json()
+      })
+      .then((data) => {
+        const normalized = normalizeSettings(data)
+        setSettings(normalized)
+        localStorage.setItem('ai_settings', JSON.stringify(normalized))
+      })
+      .catch((e) => console.error('Failed to load AI settings from server', e))
+  }, [])
+
   useEffect(() => {
     fetch(`${API_BASE_URL}/ai/chats`)
       .then(res => res.json())
@@ -81,8 +111,22 @@ export const useAIChat = () => {
       .catch(e => console.error('Failed to delete session', e))
   }, [currentSessionId])
 
-  const updateSettings = useCallback((newSettings: Partial<AISettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }))
+  const updateSettings = useCallback(async (newSettings: AISettings) => {
+    const normalized = normalizeSettings(newSettings)
+    const response = await fetch(`${API_BASE_URL}/ai/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(normalized),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || '保存 AI 设置失败')
+    }
+
+    const saved = normalizeSettings(await response.json())
+    setSettings(saved)
+    localStorage.setItem('ai_settings', JSON.stringify(saved))
   }, [])
 
   const sendMessage = useCallback(async (content: string, options?: { useBailian?: boolean }) => {
