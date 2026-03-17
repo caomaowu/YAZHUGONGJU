@@ -3,6 +3,7 @@ import { Form, Input, InputNumber, Select, Button, Space, Divider, Row, Col, Upl
 import { UploadOutlined, SaveOutlined } from '@ant-design/icons';
 import type { UploadChangeParam, UploadFile } from 'antd/es/upload/interface';
 import type { DieCastingMachine, MachineModelSpecs } from '../../types/machine';
+import { normalizeMachineRawSpecs } from '../../utils/machineSpecs';
 
 interface MachineEditFormProps {
   initialValues: DieCastingMachine;
@@ -88,10 +89,10 @@ export const MachineEditForm: React.FC<MachineEditFormProps> = ({ initialValues,
     // Merge base raw specs (either initial or from selected model) with form values
     const mergedRawSpecs: MachineModelSpecs | undefined =
       baseRawSpecsRef.current || values.rawSpecs
-        ? ({
+        ? normalizeMachineRawSpecs({
             ...(baseRawSpecsRef.current ?? {}),
             ...(values.rawSpecs ?? {})
-          } as MachineModelSpecs)
+          })
         : undefined;
 
     // Reconstruct the machine object

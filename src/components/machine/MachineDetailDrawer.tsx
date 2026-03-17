@@ -4,6 +4,7 @@ import { CloseOutlined, PrinterOutlined, EditOutlined, ZoomInOutlined, DeleteOut
 import type { DieCastingMachine, MachineModelSpecs } from '../../types/machine';
 import { MachineRadar } from './MachineRadar';
 import { MachineEditForm } from './MachineEditForm';
+import { computeBarrelInnerLength } from '../../utils/machineSpecs';
 
 const { Title, Text } = Typography;
 
@@ -44,6 +45,7 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
   ];
 
   const rawSpecs: MachineModelSpecs | undefined = machine.rawSpecs;
+  const displayedBarrelInnerLength = computeBarrelInnerLength(rawSpecs) ?? rawSpecs?.料管内部长度_mm;
 
   const renderOverview = () => (
     <>
@@ -118,7 +120,7 @@ export const MachineDetailDrawer: React.FC<MachineDetailDrawerProps> = ({ machin
           labelStyle={{ backgroundColor: '#fff1f0' }}
           contentStyle={{ backgroundColor: '#fff1f0', color: '#ff4d4f', fontWeight: 'bold' }}
         >
-          {rawSpecs.料管内部长度_mm ?? '-'} mm
+          {displayedBarrelInnerLength ?? '-'} mm
         </Descriptions.Item>
         <Descriptions.Item label="压室法兰直径">{rawSpecs.压室法兰直径_mm} mm</Descriptions.Item>
         <Descriptions.Item label="法兰高度">{rawSpecs.法兰高度_mm} mm</Descriptions.Item>

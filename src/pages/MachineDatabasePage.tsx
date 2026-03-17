@@ -8,6 +8,7 @@ import { AddMachineModal } from '../components/machine/AddMachineModal';
 import { mockMachines } from '../mock/machines';
 import type { DieCastingMachine, MachineModelSpecs } from '../types/machine';
 import { useAuth } from '../core/auth/useAuth';
+import { normalizeMachineRawSpecs } from '../utils/machineSpecs';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -220,7 +221,7 @@ export const MachineDatabasePage: React.FC = () => {
           ejectionStroke: selectedModel?.["顶出行程_mm"] || 0,
           injectionRate: undefined
         },
-        rawSpecs: selectedModel
+        rawSpecs: normalizeMachineRawSpecs(selectedModel)
       };
       
       newMachinesToAdd.push(newMachine);

@@ -10,7 +10,7 @@ import {
   CHATS_FILE,
   ANALYTICS_EVENTS_FILE
 } from '../config/index.js';
-import { readJsonWithDefault } from '../utils/helpers.js';
+import { normalizeMachineRawSpecs, readJsonWithDefault } from '../utils/helpers.js';
 
 const ANALYTICS_MAX_EVENTS = 100000;
 const ANALYTICS_MAX_DAYS = 90;
@@ -287,7 +287,12 @@ export const getMachines = async (req, res) => {
 
 export const saveMachines = async (req, res) => {
   try {
-    const machines = req.body;
+    const machines = Array.isArray(req.body)
+      ? req.body.map(machine => ({
+          ...machine,
+          rawSpecs: normalizeMachineRawSpecs(machine.rawSpecs),
+        }))
+      : req.body;
     await fs.writeJson(DATA_FILE, machines, { spaces: 2 });
     res.json({ success: true, message: 'Machines saved successfully' });
   } catch (error) {

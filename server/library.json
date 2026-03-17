@@ -45,10 +45,10 @@
     "description": "",
     "category": "",
     "tags": [],
-    "searchStatus": "ready",
-    "searchError": "",
+    "searchStatus": "failed",
+    "searchError": "Source file not found",
     "searchVersion": 1,
-    "searchUpdatedAt": "2026-03-05T12:51:04.411Z"
+    "searchUpdatedAt": "2026-03-17T01:56:51.422Z"
   },
   {
     "id": "41003b67-5059-4710-898a-513d1cd7a3c7",
